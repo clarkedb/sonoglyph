@@ -9,6 +9,10 @@
  * Frequency selectivity is set by the block length: like an FFT bin, a
  * rectangular block of N samples has a main lobe ~2·sampleRate/N wide, so
  * shorter blocks trade selectivity for time resolution at the same cost.
+ *
+ * Meant for mid-band probes. At DC and Nyquist the recurrence sits on
+ * the unit circle's real axis and the 2/N normalization overstates by
+ * 2× — guard or renormalize before probing those extremes.
  */
 
 /**

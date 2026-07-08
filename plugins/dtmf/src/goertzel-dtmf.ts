@@ -18,7 +18,9 @@ export interface GoertzelDtmfOptions {
    * ≈ 2·sampleRate/block) and its noise-averaging knob at once, so each
    * group gets its own: the low group is 73 Hz-spaced and sits next to
    * the room-rumble band, so it wants the long block (2048 ≈ 43 ms at
-   * 48 kHz — 47 Hz lobe, 2× the noise averaging).
+   * 48 kHz — 47 Hz lobe, 2× the noise averaging). Blocks are silently
+   * capped at the frame length: run the engine at a smaller window and
+   * you also shrink this decoder's selectivity and noise immunity.
    */
   lowBlockSize: number;
   /**
@@ -121,6 +123,14 @@ interface GoertzelMatchDetail {
  * keeps decoding in the deep-noise regime past the FFT recognizer's
  * documented ~10:1 fan-noise limit. Segmentation (debouncing, minimum
  * duration, gaps) is the shared plugin-SDK machine.
+ *
+ * One consequence of learning the floors from the signal: the decoder
+ * needs a moment of ambience before the first press. A stream that
+ * opens mid-tone seeds the floor AT the tone, which then reads as "the
+ * room sounds like this" and the opening press is missed (the floor
+ * falls the instant the tone ends, so only the first press is at risk).
+ * Real signals — and the playground's padded buffers — always lead with
+ * ambience; synthetic ones should too.
  */
 export class GoertzelDtmfRecognizer extends SegmentingRecognizer<
   GoertzelMatchDetail,
@@ -189,8 +199,11 @@ function classifyBlock(
   const sampleRate = Math.round(samples.length / frame.span);
 
   // Compensating for the high-pass response makes probe powers comparable
-  // to the signal as it entered the microphone (a full-scale in-probe sine
-  // reads ~1.0), so twist and group comparisons stay physical.
+  // to the signal as it entered the microphone, so twist and group
+  // comparisons stay physical. (The compensation uses the analog filter
+  // response, so an in-probe sine reads ~0.85 of its true power — a
+  // uniform ~0.7 dB bias across the band that cancels in every ratio
+  // and only slightly shades the reported snrDb.)
   const probeOn = (block: Float32Array) => (frequencyHz: number) =>
     goertzelPower(block, frequencyHz, sampleRate) / highPassPowerGain(frequencyHz, opts.highPassHz);
   const blockOf = (blockSize: number) =>

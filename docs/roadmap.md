@@ -131,7 +131,7 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 ## Beyond
 
-Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the _Project Hail Mary_ origin story), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
+Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the _Project Hail Mary_ origin story, now sketched as the [Hail Mary milestone](https://github.com/clarkedb/sonoglyph/milestone/5): Eridian language spec, recognizer plugin, and themed website experiences including Grace's realtime translator console), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
 
 ## GitHub Actions
 

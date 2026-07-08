@@ -38,6 +38,16 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  plugins/dtmf:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+    devDependencies:
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../../packages/dsp
+
 packages:
 
   '@babel/code-frame@7.29.7':

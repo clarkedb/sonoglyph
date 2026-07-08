@@ -16,14 +16,18 @@ export const PEAKS_VERSION = 1;
 export const ENVELOPE_VERSION = 1;
 
 /**
- * Defaults tuned for DTMF at 48 kHz: a 4096-sample window gives ~12 Hz bins
- * (comfortably separating the 73 Hz-spaced low group), and a 1024-sample hop
- * (~21 ms) gives enough frames to debounce 40 ms tones.
+ * Defaults tuned for DTMF at 48 kHz. A 2048-sample window gives ~23 Hz bins
+ * — with parabolic peak interpolation that cleanly separates the 73 Hz-spaced
+ * low group. Time resolution matters just as much as frequency resolution
+ * here: the ~43 ms window plus a 512-sample hop (~11 ms) is what lets the
+ * recognizer see 40 ms tones and the gaps between fast key presses. A 4096
+ * window halves the bin width but smears every tone across ~85 ms, bridging
+ * real inter-digit gaps — the window-size tradeoff, live.
  */
 export const DEFAULT_ENGINE_OPTIONS: DspEngineOptions = {
   sampleRate: 48_000,
-  windowSize: 4096,
-  hopSize: 1024,
+  windowSize: 2048,
+  hopSize: 512,
   window: 'hann',
   streams: [STREAM_SPECTRUM, STREAM_PEAKS, STREAM_ENVELOPE],
 };
@@ -98,8 +102,9 @@ export class TsDspEngine implements DspEngine {
   }
 
   private analyze(frame: Float32Array, time: number, out: FeatureFrame[]): void {
-    const { streams, sampleRate, hopSize } = this.options;
+    const { streams, sampleRate, hopSize, windowSize } = this.options;
     const hop = hopSize / sampleRate;
+    const span = windowSize / sampleRate;
 
     const wantSpectrum = streams.includes(STREAM_SPECTRUM);
     const wantPeaks = streams.includes(STREAM_PEAKS);
@@ -112,11 +117,11 @@ export class TsDspEngine implements DspEngine {
 
       if (wantSpectrum) {
         const data: SpectrumData = { magnitudes, binHz: this.binHz, window: this.options.window };
-        out.push({ stream: STREAM_SPECTRUM, version: SPECTRUM_VERSION, time, hop, data });
+        out.push({ stream: STREAM_SPECTRUM, version: SPECTRUM_VERSION, time, span, hop, data });
       }
       if (wantPeaks) {
         const data: PeaksData = { peaks: detectPeaks(magnitudes, { binHz: this.binHz }) };
-        out.push({ stream: STREAM_PEAKS, version: PEAKS_VERSION, time, hop, data });
+        out.push({ stream: STREAM_PEAKS, version: PEAKS_VERSION, time, span, hop, data });
       }
     }
 
@@ -130,7 +135,7 @@ export class TsDspEngine implements DspEngine {
         if (abs > peak) peak = abs;
       }
       const data: EnvelopeData = { rms: Math.sqrt(sumSq / frame.length), peak };
-      out.push({ stream: STREAM_ENVELOPE, version: ENVELOPE_VERSION, time, hop, data });
+      out.push({ stream: STREAM_ENVELOPE, version: ENVELOPE_VERSION, time, span, hop, data });
     }
   }
 

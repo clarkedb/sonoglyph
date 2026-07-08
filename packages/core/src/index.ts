@@ -52,6 +52,11 @@ export interface FeatureFrame<T = unknown> {
   version: number;
   /** Frame start, in seconds of stream time. */
   time: number;
+  /** Seconds of signal this frame describes (the analysis window length).
+   * Recognizers need this for segmentation math: a tone appears in every
+   * frame whose window overlaps it, so measured spans are smeared by
+   * roughly one window length. */
+  span: number;
   /** Seconds between successive frames of this stream. */
   hop: number;
   /** Stream-specific payload. */

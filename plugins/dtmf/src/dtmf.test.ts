@@ -58,6 +58,25 @@ function dtmfSignal(keys: string, opts: SignalOptions = {}): Float32Array {
 }
 
 /**
+ * Fan-like noise: white noise through a one-pole low-pass (~200 Hz), which
+ * concentrates energy in the rumble band the way real HVAC/fan noise does.
+ */
+function fanNoise(durationSec: number, amplitude: number): Float32Array {
+  const raw = whiteNoise(durationSec, SAMPLE_RATE, 1, 99);
+  const out = new Float32Array(raw.length);
+  const alpha = 1 - Math.exp((-2 * Math.PI * 200) / SAMPLE_RATE);
+  let y = 0;
+  for (let i = 0; i < raw.length; i++) {
+    y += alpha * (raw[i]! - y);
+    out[i] = y;
+  }
+  let peak = 0;
+  for (const s of out) peak = Math.max(peak, Math.abs(s));
+  for (let i = 0; i < out.length; i++) out[i] = (out[i]! / peak) * amplitude;
+  return out;
+}
+
+/**
  * Feed a signal through the exact pipeline the microphone uses — engine
  * defaults, 128-sample chunks like an AudioWorklet delivers.
  */
@@ -128,6 +147,32 @@ describe('DtmfRecognizer (end to end on synthetic audio)', () => {
 
   it('rejects pairs with excessive twist', () => {
     expect(decode(dtmfSignal('8', { highScale: 0.02 }))).toHaveLength(0);
+  });
+
+  it('decodes a quiet tone under loud low-frequency fan noise', () => {
+    // A phone speaker across the room vs. a fan next to the mic: the tone
+    // is 10× quieter than the rumble. Out-of-band peaks must not veto the
+    // pair (they are outside `bandHz`) — without the band limit this level
+    // does not decode. (Somewhere below ~0.02 the 43 ms window's own
+    // physics gives out; that regime is the Phase 2 Goertzel comparison.)
+    const signal = mix(dtmfSignal('3', { amplitude: 0.03 }), fanNoise(1, 0.3));
+    expect(symbols(decode(signal))).toBe('3');
+  });
+
+  it('still rejects a pair drowned out by a louder in-band tone', () => {
+    // 1000 Hz sits inside the DTMF band but matches no nominal; when it is
+    // much louder than the pair, the frame is not a clean key press.
+    const press = tones(
+      [
+        { frequencyHz: 770, amplitude: 0.1 },
+        { frequencyHz: 1336, amplitude: 0.1 },
+        { frequencyHz: 1000, amplitude: 0.5 },
+      ],
+      0.1,
+      SAMPLE_RATE,
+    );
+    const signal = concat(silence(0.1, SAMPLE_RATE), press, silence(0.3, SAMPLE_RATE));
+    expect(decode(signal)).toHaveLength(0);
   });
 
   it('ignores non-DTMF tone pairs', () => {

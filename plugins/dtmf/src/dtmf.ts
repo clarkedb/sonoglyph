@@ -24,6 +24,14 @@ export interface DtmfOptions {
   minGapMs: number;
   /** Maximum level difference between the two tones, in dB ("twist"). */
   maxTwistDb: number;
+  /**
+   * The frequency band the recognizer considers, in Hz. Peaks outside it
+   * are invisible to the dominance check — a rumbling fan, a bass line, or
+   * speech fundamentals are all louder than a distant phone speaker, but
+   * they say nothing about whether a key was pressed. Real DTMF decoders
+   * band-limit for the same reason.
+   */
+  bandHz: readonly [number, number];
 }
 
 export const DEFAULT_DTMF_OPTIONS: DtmfOptions = {
@@ -31,6 +39,7 @@ export const DEFAULT_DTMF_OPTIONS: DtmfOptions = {
   minToneMs: 40,
   minGapMs: 25,
   maxTwistDb: 12,
+  bandHz: [600, 1750],
 };
 
 /** Payload attached to every DTMF glyph. */
@@ -82,10 +91,12 @@ interface Tracking {
  * Per frame, it looks for one peak near a low-group nominal and one near a
  * high-group nominal (a per-frame classification). Across frames, a
  * debouncing state machine turns those classifications into key presses:
- * a key must persist for `minToneMs` to register, and a `minGapMs` gap must
- * separate two presses of the same key — which is how "55" becomes two
- * glyphs instead of one long one. The glyph is emitted when the press ends,
- * so its duration covers the whole press.
+ * a key must persist for `minToneMs` to register, and a `minGapMs` gap —
+ * silence or a different key — must elapse before the press ends. Treating
+ * key changes like silence makes the machine robust to noise flipping a
+ * single frame to a neighboring key, and it is how "55" becomes two glyphs
+ * instead of one long one. The glyph is emitted when the press ends, so
+ * its duration covers the whole press.
  */
 export class DtmfRecognizer implements RecognizerPlugin {
   readonly metadata: PluginMetadata = {
@@ -110,10 +121,11 @@ export class DtmfRecognizer implements RecognizerPlugin {
     const hop = frame.hop;
 
     if (this.tracking && match && match.key === this.tracking.key) {
-      // The press continues (a short dropout within the gap window is
-      // forgiven — gapFrames just resets).
+      // The press continues. Absorbed frames since the key was last seen —
+      // dropouts or noise-flipped misclassifications — are credited to the
+      // duration: the tone was evidently sounding right through them.
       const t = this.tracking;
-      t.frameCount++;
+      t.frameCount += 1 + t.gapFrames;
       t.gapFrames = 0;
       t.sumConfidence += match.confidence;
       t.sumLowHz += match.lowHz;
@@ -123,11 +135,13 @@ export class DtmfRecognizer implements RecognizerPlugin {
     }
 
     if (this.tracking) {
+      // Silence AND different-key frames both count toward the gap. Noise
+      // can flip a single frame to a neighboring key, so a key change only
+      // takes effect once it outlasts the gap threshold — same debouncing
+      // that separates presses from dropouts.
       this.tracking.gapFrames++;
       const gapSec = this.tracking.gapFrames * hop;
-      // A different key ends the press immediately; silence ends it after
-      // the gap threshold.
-      if (match || gapSec >= this.options.minGapMs / 1000) {
+      if (gapSec >= this.options.minGapMs / 1000) {
         this.finish(this.tracking, hop);
         this.tracking = null;
       }
@@ -168,11 +182,14 @@ export class DtmfRecognizer implements RecognizerPlugin {
     const twistDb = 20 * Math.log10(high.peak.magnitude / low.peak.magnitude);
     if (Math.abs(twistDb) > this.options.maxTwistDb) return null;
 
-    // The pair must dominate the frame: any peak that is not one of the two
-    // matched tones may not be much louder than the weaker of them.
+    // The pair must dominate the band: any in-band peak that is not one of
+    // the two matched tones may not be much louder than the weaker of them.
+    // Out-of-band peaks don't get a vote (see `bandHz`).
+    const [bandLow, bandHigh] = this.options.bandHz;
     const weaker = Math.min(low.peak.magnitude, high.peak.magnitude);
     for (const p of peaks) {
       if (p === low.peak || p === high.peak) continue;
+      if (p.frequencyHz < bandLow || p.frequencyHz > bandHigh) continue;
       if (p.magnitude > 2 * weaker) return null;
     }
 

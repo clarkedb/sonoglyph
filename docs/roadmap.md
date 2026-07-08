@@ -139,11 +139,13 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 
 `ci.yml` — on every PR and push to `main`:
 
-| Job  | Steps                                                                                                                                                                                                              |
-| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ci` | checkout → pnpm + Node LTS (with pnpm store cache) → `pnpm install --frozen-lockfile` → `pnpm lint` (ESLint + Prettier check) → `pnpm typecheck` → `pnpm test` (Vitest) → `pnpm build` (all packages + playground) |
+| Job      | Steps                                                                                                                                                                                    |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checks` | checkout → pnpm + Node (versions pinned via `packageManager` / `.nvmrc`, pnpm store cache) → `pnpm install --frozen-lockfile` → `pnpm lint` (ESLint + Prettier check) → `pnpm typecheck` |
+| `test`   | same setup → `pnpm test` (Vitest)                                                                                                                                                        |
+| `build`  | same setup → `pnpm build` (all packages + playground); `needs: [checks, test]`, so a green `build` means the whole pipeline passed                                                       |
 
-Keep it one job while the repo is small; split lint/test/build into parallel jobs when total time makes it worth it. Branch protection on `main` requires CI green.
+`checks` and `test` run in parallel; `build` gates on both, so branch protection on `main` only needs to require `build`. Actions are pinned to release commit SHAs with the semantic tag as a comment; Dependabot keeps the pins fresh.
 
 ### Phase 2 — versioning & publishing
 

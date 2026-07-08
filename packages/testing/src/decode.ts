@@ -4,7 +4,9 @@ import { Pipeline, TsDspEngine } from '@sonoglyph/dsp';
 export interface DecodeOptions {
   /** Sample rate of the signal. Defaults to 48 kHz, the engine default. */
   sampleRate?: number;
-  /** Engine overrides beyond the sample rate (window size, streams, …). */
+  /** Engine overrides beyond the sample rate (window size, streams, …).
+   * A `sampleRate` in here wins over the top-level option — don't set
+   * both, or the engine's rate silently detaches from the signal's. */
   engineOptions?: Partial<DspEngineOptions>;
   /**
    * Chunk size the signal is fed in. Defaults to 128 samples — the

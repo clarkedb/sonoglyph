@@ -1,14 +1,7 @@
-import type {
-  FeatureFrame,
-  Glyph,
-  PeaksData,
-  PluginMetadata,
-  RecognizerPlugin,
-  SpectralPeak,
-  Unsubscribe,
-} from '@sonoglyph/core';
+import type { FeatureFrame, PeaksData, PluginMetadata, SpectralPeak } from '@sonoglyph/core';
 import { STREAM_PEAKS } from '@sonoglyph/core';
-import type { DtmfKey } from './frequencies.js';
+import type { FrameMatch, Press } from '@sonoglyph/plugin-sdk';
+import { SegmentingRecognizer } from '@sonoglyph/plugin-sdk';
 import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
 
 export interface DtmfOptions {
@@ -56,212 +49,130 @@ export interface DtmfPayload {
   twistDb: number;
 }
 
-/** What one peaks frame looks like when it contains a valid DTMF pair. */
-interface FrameMatch {
-  key: DtmfKey;
+/** Per-frame detail carried on each match, aggregated in `finalize`. */
+interface DtmfMatchDetail {
   lowHz: number;
   highHz: number;
   nominalLowHz: number;
   nominalHighHz: number;
   twistDb: number;
-  /** 1 at exact nominal frequencies, falling to 0 at the tolerance edge. */
-  confidence: number;
-}
-
-/** An in-progress key press being accumulated across frames. */
-interface Tracking {
-  key: DtmfKey;
-  startTime: number;
-  /** Analysis window length of the frames, in seconds. */
-  span: number;
-  /** Frames covering the press, including absorbed dropouts/blips — the
-   * basis for duration. */
-  frameCount: number;
-  /** Frames that actually matched the key — the basis for the averaged
-   * payload and confidence (the sums below have this many terms). */
-  matchedFrames: number;
-  /** Frames since the key was last seen (silence or another key). */
-  gapFrames: number;
-  sumConfidence: number;
-  sumLowHz: number;
-  sumHighHz: number;
-  sumTwistDb: number;
-  nominalLowHz: number;
-  nominalHighHz: number;
 }
 
 /**
  * DTMF recognizer — Sonoglyph's reference plugin.
  *
- * Per frame, it looks for one peak near a low-group nominal and one near a
- * high-group nominal (a per-frame classification). Across frames, a
- * debouncing state machine turns those classifications into key presses:
- * a key must persist for `minToneMs` to register, and a `minGapMs` gap —
- * silence or a different key — must elapse before the press ends. Treating
- * key changes like silence makes the machine robust to noise flipping a
- * single frame to a neighboring key, and it is how "55" becomes two glyphs
- * instead of one long one. The glyph is emitted when the press ends, so
- * its duration covers the whole press.
+ * Per frame, `classify` looks for one peak near a low-group nominal and one
+ * near a high-group nominal (a per-frame classification). Turning those
+ * classifications into key presses — a key must persist for `minToneMs`,
+ * a `minGapMs` gap ends the press, single flipped frames are debounced —
+ * is entirely the plugin SDK's segmentation machine; this plugin is the
+ * machine's reference user. `finalize` averages the detected frequencies
+ * across the press into the glyph payload.
  */
-export class DtmfRecognizer implements RecognizerPlugin {
-  readonly metadata: PluginMetadata = {
-    id: 'dtmf',
-    name: 'DTMF (FFT peaks)',
-    version: '0.1.0',
-    requiredStreams: [STREAM_PEAKS],
-    description: 'Recognizes the 16 telephone keypad tones from spectral peak pairs',
-  };
-
+export class DtmfRecognizer extends SegmentingRecognizer<DtmfMatchDetail, DtmfPayload> {
   readonly options: DtmfOptions;
-  private readonly listeners = new Set<(glyph: Glyph<DtmfPayload>) => void>();
-  private tracking: Tracking | null = null;
 
   constructor(options: Partial<DtmfOptions> = {}) {
-    this.options = { ...DEFAULT_DTMF_OPTIONS, ...options };
+    const opts = { ...DEFAULT_DTMF_OPTIONS, ...options };
+    const metadata: PluginMetadata = {
+      id: 'dtmf',
+      name: 'DTMF (FFT peaks)',
+      version: '0.1.0',
+      requiredStreams: [STREAM_PEAKS],
+      description: 'Recognizes the 16 telephone keypad tones from spectral peak pairs',
+    };
+    super({
+      metadata,
+      segmentation: { minDurationMs: opts.minToneMs, minGapMs: opts.minGapMs },
+      classify: (frame: FeatureFrame) => classifyPeaks((frame.data as PeaksData).peaks, opts),
+      finalize: aggregatePress,
+    });
+    this.options = opts;
+  }
+}
+
+/** Classify one frame's peaks as a DTMF pair, or null. */
+function classifyPeaks(
+  peaks: SpectralPeak[],
+  opts: DtmfOptions,
+): FrameMatch<DtmfMatchDetail> | null {
+  const low = matchGroup(peaks, LOW_GROUP, opts.freqTolerance);
+  const high = matchGroup(peaks, HIGH_GROUP, opts.freqTolerance);
+  if (!low || !high) return null;
+
+  const twistDb = 20 * Math.log10(high.peak.magnitude / low.peak.magnitude);
+  if (Math.abs(twistDb) > opts.maxTwistDb) return null;
+
+  // The pair must dominate the band: any in-band peak that is not one of
+  // the two matched tones may not be much louder than the weaker of them.
+  // Out-of-band peaks don't get a vote (see `bandHz`).
+  const [bandLow, bandHigh] = opts.bandHz;
+  const weaker = Math.min(low.peak.magnitude, high.peak.magnitude);
+  for (const p of peaks) {
+    if (p === low.peak || p === high.peak) continue;
+    if (p.frequencyHz < bandLow || p.frequencyHz > bandHigh) continue;
+    if (p.magnitude > 2 * weaker) return null;
   }
 
-  process(frame: FeatureFrame): void {
-    if (frame.stream !== STREAM_PEAKS) return;
-    const match = this.classify((frame.data as PeaksData).peaks);
-    const hop = frame.hop;
+  const key = keyFor(low.nominal, high.nominal);
+  if (!key) return null;
 
-    if (this.tracking && match && match.key === this.tracking.key) {
-      // The press continues. Absorbed frames since the key was last seen —
-      // dropouts or noise-flipped misclassifications — are credited to the
-      // duration: the tone was evidently sounding right through them.
-      const t = this.tracking;
-      t.frameCount += 1 + t.gapFrames;
-      t.matchedFrames++;
-      t.gapFrames = 0;
-      t.sumConfidence += match.confidence;
-      t.sumLowHz += match.lowHz;
-      t.sumHighHz += match.highHz;
-      t.sumTwistDb += match.twistDb;
-      return;
-    }
-
-    if (this.tracking) {
-      // Silence AND different-key frames both count toward the gap. Noise
-      // can flip a single frame to a neighboring key, so a key change only
-      // takes effect once it outlasts the gap threshold — same debouncing
-      // that separates presses from dropouts.
-      this.tracking.gapFrames++;
-      const gapSec = this.tracking.gapFrames * hop;
-      if (gapSec >= this.options.minGapMs / 1000) {
-        this.finish(this.tracking, hop);
-        this.tracking = null;
-      }
-    }
-
-    if (!this.tracking && match) {
-      this.tracking = {
-        key: match.key,
-        startTime: frame.time,
-        span: frame.span,
-        frameCount: 1,
-        matchedFrames: 1,
-        gapFrames: 0,
-        sumConfidence: match.confidence,
-        sumLowHz: match.lowHz,
-        sumHighHz: match.highHz,
-        sumTwistDb: match.twistDb,
-        nominalLowHz: match.nominalLowHz,
-        nominalHighHz: match.nominalHighHz,
-      };
-    }
-  }
-
-  onGlyph(cb: (glyph: Glyph) => void): Unsubscribe {
-    this.listeners.add(cb);
-    return () => this.listeners.delete(cb);
-  }
-
-  reset(): void {
-    this.tracking = null;
-  }
-
-  /** Classify one frame's peaks as a DTMF pair, or null. */
-  private classify(peaks: SpectralPeak[]): FrameMatch | null {
-    const low = this.matchGroup(peaks, LOW_GROUP);
-    const high = this.matchGroup(peaks, HIGH_GROUP);
-    if (!low || !high) return null;
-
-    const twistDb = 20 * Math.log10(high.peak.magnitude / low.peak.magnitude);
-    if (Math.abs(twistDb) > this.options.maxTwistDb) return null;
-
-    // The pair must dominate the band: any in-band peak that is not one of
-    // the two matched tones may not be much louder than the weaker of them.
-    // Out-of-band peaks don't get a vote (see `bandHz`).
-    const [bandLow, bandHigh] = this.options.bandHz;
-    const weaker = Math.min(low.peak.magnitude, high.peak.magnitude);
-    for (const p of peaks) {
-      if (p === low.peak || p === high.peak) continue;
-      if (p.frequencyHz < bandLow || p.frequencyHz > bandHigh) continue;
-      if (p.magnitude > 2 * weaker) return null;
-    }
-
-    const key = keyFor(low.nominal, high.nominal);
-    if (!key) return null;
-
+  return {
+    symbol: key,
     // Confidence: 1 at nominal frequency, 0 at the tolerance edge.
-    const confidence = 1 - (low.deviation + high.deviation) / 2;
-
-    return {
-      key,
+    confidence: 1 - (low.deviation + high.deviation) / 2,
+    payload: {
       lowHz: low.peak.frequencyHz,
       highHz: high.peak.frequencyHz,
       nominalLowHz: low.nominal,
       nominalHighHz: high.nominal,
       twistDb,
-      confidence,
-    };
-  }
+    },
+  };
+}
 
-  /**
-   * Find the strongest peak within tolerance of any nominal in a group.
-   * Returns the matched nominal and the deviation as a fraction of the
-   * tolerance (0 = exact, 1 = at the edge).
-   */
-  private matchGroup(
-    peaks: SpectralPeak[],
-    group: readonly number[],
-  ): { peak: SpectralPeak; nominal: number; deviation: number } | null {
-    let best: { peak: SpectralPeak; nominal: number; deviation: number } | null = null;
-    for (const peak of peaks) {
-      for (const nominal of group) {
-        const deviation =
-          Math.abs(peak.frequencyHz - nominal) / (nominal * this.options.freqTolerance);
-        if (deviation > 1) continue;
-        if (!best || peak.magnitude > best.peak.magnitude) {
-          best = { peak, nominal, deviation };
-        }
+/**
+ * Find the strongest peak within tolerance of any nominal in a group.
+ * Returns the matched nominal and the deviation as a fraction of the
+ * tolerance (0 = exact, 1 = at the edge).
+ */
+function matchGroup(
+  peaks: SpectralPeak[],
+  group: readonly number[],
+  tolerance: number,
+): { peak: SpectralPeak; nominal: number; deviation: number } | null {
+  let best: { peak: SpectralPeak; nominal: number; deviation: number } | null = null;
+  for (const peak of peaks) {
+    for (const nominal of group) {
+      const deviation = Math.abs(peak.frequencyHz - nominal) / (nominal * tolerance);
+      if (deviation > 1) continue;
+      if (!best || peak.magnitude > best.peak.magnitude) {
+        best = { peak, nominal, deviation };
       }
     }
-    return best;
   }
+  return best;
+}
 
-  /** Emit a glyph for a finished press, if it lasted long enough. */
-  private finish(t: Tracking, hop: number): void {
-    // A tone shows up in every frame whose analysis window overlaps it, so
-    // the raw matched span overstates the tone by roughly half a window;
-    // correct for that before judging (and reporting) the duration.
-    const duration = t.frameCount * hop - t.span / 2;
-    if (duration < this.options.minToneMs / 1000) return;
-
-    const glyph: Glyph<DtmfPayload> = {
-      symbol: t.key,
-      pluginId: this.metadata.id,
-      start: t.startTime,
-      duration,
-      confidence: Math.max(0, Math.min(1, t.sumConfidence / t.matchedFrames)),
-      payload: {
-        lowHz: t.sumLowHz / t.matchedFrames,
-        highHz: t.sumHighHz / t.matchedFrames,
-        nominalLowHz: t.nominalLowHz,
-        nominalHighHz: t.nominalHighHz,
-        twistDb: t.sumTwistDb / t.matchedFrames,
-      },
-    };
-    for (const cb of this.listeners) cb(glyph);
+/** Average the per-frame detail into the glyph payload. */
+function aggregatePress(press: Press<DtmfMatchDetail>): { payload: DtmfPayload } {
+  let lowHz = 0;
+  let highHz = 0;
+  let twistDb = 0;
+  for (const m of press.matches) {
+    lowHz += m.payload!.lowHz;
+    highHz += m.payload!.highHz;
+    twistDb += m.payload!.twistDb;
   }
+  const n = press.matches.length;
+  const first = press.matches[0]!.payload!;
+  return {
+    payload: {
+      lowHz: lowHz / n,
+      highHz: highHz / n,
+      nominalLowHz: first.nominalLowHz,
+      nominalHighHz: first.nominalHighHz,
+      twistDb: twistDb / n,
+    },
+  };
 }

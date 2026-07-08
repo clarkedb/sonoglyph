@@ -93,7 +93,14 @@ export interface MorseSegment {
  */
 export function morseTiming(text: string): MorseSegment[] {
   const segments: MorseSegment[] = [];
-  const words = text.toUpperCase().split(/\s+/).filter(Boolean);
+  // Words with no encodable characters are dropped entirely — the same
+  // rule textToMorse applies — so unknown symbols cannot leave phantom
+  // word gaps in the timeline.
+  const words = text
+    .toUpperCase()
+    .split(/\s+/)
+    .map((word) => [...word].filter((char) => MORSE_CODE[char]).join(''))
+    .filter(Boolean);
   words.forEach((word, w) => {
     if (w > 0) segments.push({ on: false, units: 7 });
     let firstInWord = true;

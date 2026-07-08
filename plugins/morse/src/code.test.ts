@@ -42,6 +42,13 @@ describe('morseTiming', () => {
     ]);
   });
 
+  it('drops words with no encodable characters, like textToMorse', () => {
+    expect(morseTiming('A ~ B')).toEqual(morseTiming('A B'));
+    expect(morseTiming('~ SOS')).toEqual(morseTiming('SOS'));
+    expect(morseTiming('SOS ~')).toEqual(morseTiming('SOS'));
+    expect(morseTiming('~~~')).toEqual([]);
+  });
+
   it('total on-time matches the code', () => {
     const segments = morseTiming('SOS');
     const onUnits = segments.filter((s) => s.on).reduce((sum, s) => sum + s.units, 0);

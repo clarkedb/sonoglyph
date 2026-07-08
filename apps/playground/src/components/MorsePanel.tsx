@@ -47,17 +47,20 @@ export function MorsePanel() {
       <div className="flex flex-col gap-2.5">
         <div className="flex items-end gap-2">
           <label className={`${LABEL} grow`}>
-            Text to key ({text.trim() ? textToMorse(text) || '—' : '—'})
+            Text to key
             <input
               value={text}
               onChange={(event) => setText(event.target.value)}
               placeholder="SOS"
             />
           </label>
-          <button onClick={send} disabled={!text.trim()}>
+          <button onClick={send} disabled={!textToMorse(text)}>
             Key it
           </button>
         </div>
+        <p aria-live="polite" className="text-[12.5px] text-faint">
+          {textToMorse(text) || 'Nothing encodable yet — letters, digits, and .,?/= work.'}
+        </p>
         <div>
           <h3 className="text-[13px] font-bold text-heading">Transcript (Meaning layer)</h3>
           <p className="min-h-6 font-mono text-[15px] tracking-wider text-accent">
@@ -65,7 +68,11 @@ export function MorsePanel() {
               (enabled ? '—' : 'Enable the recognizer, then key some Morse.')}
           </p>
         </div>
-        {error && <p className="text-[13px] text-danger">{error}</p>}
+        {error && (
+          <p role="alert" className="text-[13px] text-danger">
+            {error}
+          </p>
+        )}
       </div>
     </Panel>
   );

@@ -69,17 +69,15 @@ export function GlyphTimeline() {
   useControllerTick();
   const glyphs = controller.glyphs;
   const decoders = controller.status.decoders;
-  const activeIds = [
-    ...(decoders === 'both'
-      ? ['dtmf', 'dtmf-goertzel']
-      : [decoders === 'fft' ? 'dtmf' : 'dtmf-goertzel']),
-    ...(controller.status.morseEnabled ? ['morse'] : []),
-  ];
-  // Label which plugin emitted each glyph whenever more than one runs.
-  const comparing = activeIds.length > 1;
-  // Chip rows: one per active plugin, so "did they agree?" is one glance.
+  // Attribution follows the glyphs actually collected, not the current
+  // toggle state: history survives plugin switches, and a glyph from a
+  // since-disabled plugin must stay labeled, never masquerade as another
+  // decoder's output.
+  const idsInGlyphs = [...new Set(glyphs.map((g) => g.pluginId))];
+  const comparing = idsInGlyphs.length > 1;
+  // Chip rows: one per emitting plugin, so "did they agree?" is one glance.
   const chipRows = comparing
-    ? activeIds.map((id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const)
+    ? idsInGlyphs.map((id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const)
     : [['', glyphs] as const];
 
   return (
@@ -126,9 +124,6 @@ export function GlyphTimeline() {
                   {g.symbol}
                 </span>
               ))}
-              {label && rowGlyphs.length === 0 && (
-                <span className="text-[12.5px] text-faint">no glyphs</span>
-              )}
             </div>
           ))}
           <table className="glyph-table w-full border-collapse text-[12.5px] tabular-nums">

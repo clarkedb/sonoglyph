@@ -50,13 +50,14 @@ export interface MorseLetterPayload {
   gapUnits: number;
 }
 
-const METADATA: PluginMetadata = {
+// Frozen: shared by every instance and by the inner element machine.
+const METADATA: PluginMetadata = Object.freeze({
   id: 'morse',
   name: 'Morse (envelope)',
   version: '0.1.0',
-  requiredStreams: [STREAM_ENVELOPE],
+  requiredStreams: Object.freeze([STREAM_ENVELOPE]) as unknown as string[],
   description: 'Decodes on/off keyed Morse from the amplitude envelope — no spectra involved',
-};
+});
 
 /**
  * Morse recognizer — time-domain recognition off the `envelope` stream,
@@ -83,6 +84,10 @@ export class MorseRecognizer implements RecognizerPlugin {
   /** Elements of the letter being accumulated. */
   private pendingCode = '';
   private letterStart = 0;
+  /** The gap before the current letter, measured in the units in force
+   * when the letter began — the letter's own elements adapt the unit
+   * estimate, and the gap physically predates them. */
+  private letterGapUnits = Number.POSITIVE_INFINITY;
   private sumConfidence = 0;
   /** Stream time when the last element ended. */
   private lastElementEnd = 0;
@@ -129,6 +134,10 @@ export class MorseRecognizer implements RecognizerPlugin {
     this.elements.onGlyph((glyph) => {
       if (this.pendingCode === '') {
         this.letterStart = glyph.start;
+        this.letterGapUnits =
+          this.prevLetterEnd === null
+            ? Number.POSITIVE_INFINITY
+            : (glyph.start - this.prevLetterEnd) / this.unitSec;
         this.sumConfidence = 0;
       }
       this.pendingCode += glyph.symbol;
@@ -163,15 +172,13 @@ export class MorseRecognizer implements RecognizerPlugin {
     this.lastElementEnd = 0;
     this.lastKeyDown = 0;
     this.prevLetterEnd = null;
+    this.letterGapUnits = Number.POSITIVE_INFINITY;
     this.unitSec = this.options.unitMs / 1000;
   }
 
   private closeLetter(): void {
     const code = this.pendingCode;
-    const gapUnits =
-      this.prevLetterEnd === null
-        ? Number.POSITIVE_INFINITY
-        : (this.letterStart - this.prevLetterEnd) / this.unitSec;
+    const gapUnits = this.letterGapUnits;
     const glyph: Glyph<MorseLetterPayload> = {
       // "?" keeps unknown codes visible instead of silently dropped —
       // mis-keyed letters are where decoding gets interesting.

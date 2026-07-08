@@ -17,6 +17,8 @@
     "bench:bless": "sh scripts/bench/bless.sh",
     "build": "pnpm -r --if-present build",
     "build:ci": "pnpm --filter @sonoglyph/dsp-wasm build:ci && pnpm --filter @sonoglyph/playground build",
+    "release:version": "changeset version && pnpm install --lockfile-only",
+    "release:publish": "pnpm build && pnpm publish -r --no-git-checks && changeset tag",
     "bootstrap": "sh scripts/bootstrap.sh",
     "prepare": "husky"
   },
@@ -25,6 +27,7 @@
     "*": "prettier --write --ignore-unknown"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@eslint/js": "^10.0.1",
     "eslint": "^10.6.0",
     "eslint-plugin-react-hooks": "^7.1.1",

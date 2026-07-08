@@ -15,6 +15,10 @@ The Rust core (`crates/`, the WASM DSP engine — see the roadmap's Phase 3) is
 `cargo test` / `cargo fmt` / `cargo clippy` provision the pinned toolchain from
 `rust-toolchain.toml`; the same commands run in the `rust.yml` CI job.
 
+Any change that should reach npm needs a changeset (`pnpm changeset` —
+see `.changeset/README.md`); docs/CI/playground-only changes don't.
+Plugin authors start at [docs/plugins.md](docs/plugins.md).
+
 ## Skills
 
 Skills follow the [Agent Skills](https://agentskills.io) open standard:

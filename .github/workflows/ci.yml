@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  checks:
-    name: Lint, format & typecheck
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -34,11 +34,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
-  # Runs only when checks and test both pass, so a green `build` means the
+  # Runs only when lint and test both pass, so a green `build` means the
   # whole pipeline passed — branch protection can require just this job.
   build:
     name: Build
-    needs: [checks, test]
+    needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

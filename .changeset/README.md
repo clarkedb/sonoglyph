@@ -8,3 +8,9 @@ merged changesets into a bot-maintained "Version Packages" PR; merging
 that PR publishes to npm with provenance.
 
 Docs-, CI-, and playground-only changes don't need one.
+
+Publish only ever runs through `pnpm publish` (the release workflow's
+`release:publish` script): the dev `package.json`s point at TypeScript
+source, and it is pnpm's `publishConfig` override that rewrites the
+entrypoints to `dist/` at pack time — a bare `npm publish` would ship a
+broken package.

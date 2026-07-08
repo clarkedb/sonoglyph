@@ -18,7 +18,7 @@
     "build": "pnpm -r --if-present build",
     "build:ci": "pnpm --filter @sonoglyph/dsp-wasm build:ci && pnpm --filter @sonoglyph/playground build",
     "release:version": "changeset version && pnpm install --lockfile-only",
-    "release:publish": "pnpm build && pnpm publish -r --no-git-checks && changeset tag",
+    "release:publish": "pnpm build && pnpm publish -r --provenance --no-git-checks && changeset tag",
     "bootstrap": "sh scripts/bootstrap.sh",
     "prepare": "husky"
   },

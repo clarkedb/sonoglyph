@@ -82,7 +82,14 @@ export interface RecognizerSpec<P = unknown, G = unknown> {
    * symbols are decided (e.g. Morse dot vs. dash).
    */
   finalize?(press: Press<P>): GlyphInit<G> | null;
-  /** Stream to classify. Defaults to `metadata.requiredStreams[0]`. */
+  /**
+   * Stream to classify. Defaults to `metadata.requiredStreams[0]`. The
+   * machine classifies exactly ONE stream — frames of any other stream
+   * are ignored, even if listed in `requiredStreams`. A plugin that must
+   * fuse several streams implements `RecognizerPlugin` directly (and may
+   * still compose this machine for the parts that fit, as the Morse
+   * plugin does).
+   */
   stream?: string;
 }
 
@@ -119,6 +126,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
 
   private readonly spec: RecognizerSpec<P, G>;
   private readonly stream: string;
+  private readonly segmentation: SegmentationOptions;
   private readonly listeners = new Set<(glyph: Glyph<G>) => void>();
   private tracking: Tracking<P> | null = null;
 
@@ -129,6 +137,10 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     }
     this.spec = spec;
     this.stream = stream;
+    // Snapshot, so every configuration knob behaves the same way: fixed
+    // at construction, like `stream` — mutating the spec afterwards
+    // changes nothing.
+    this.segmentation = { ...spec.segmentation };
     this.metadata = spec.metadata;
   }
 
@@ -156,9 +168,12 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
       // debouncing that separates presses from dropouts.
       this.tracking.gapFrames++;
       const gapSec = this.tracking.gapFrames * hop;
-      if (gapSec >= this.spec.segmentation.minGapMs / 1000) {
-        this.finish(this.tracking, hop);
+      if (gapSec >= this.segmentation.minGapMs / 1000) {
+        // Detach before emitting: a listener may re-enter process()/
+        // reset() synchronously, and it must see the press as finished.
+        const finished = this.tracking;
         this.tracking = null;
+        this.finish(finished, hop);
       }
     }
 
@@ -186,11 +201,11 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
   /** Emit a glyph for a finished press, if it lasted long enough. */
   private finish(t: Tracking<P>, hop: number): void {
     const duration = t.frameCount * hop - t.span / 2;
-    if (duration < this.spec.segmentation.minDurationMs / 1000) return;
+    if (duration < this.segmentation.minDurationMs / 1000) return;
 
     let confidence = 0;
     for (const m of t.matches) confidence += m.confidence;
-    confidence = Math.max(0, Math.min(1, confidence / t.matches.length));
+    confidence = clamp01(confidence / t.matches.length);
 
     const press: Press<P> = {
       symbol: t.symbol,
@@ -201,14 +216,17 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
       confidence,
     };
     const init = this.spec.finalize ? this.spec.finalize(press) : {};
-    if (init === null) return;
+    // == also catches a finalize that returned nothing at all (a plain-JS
+    // author's void arrow function): treat it as a veto, not a crash.
+    if (init == null) return;
 
     const glyph: Glyph<G> = {
       symbol: init.symbol ?? press.symbol,
       pluginId: this.metadata.id,
       start: press.start,
       duration: press.duration,
-      confidence: init.confidence ?? press.confidence,
+      // The Glyph contract says 0..1, so hold overriders to it too.
+      confidence: init.confidence !== undefined ? clamp01(init.confidence) : press.confidence,
       ...(init.payload !== undefined ? { payload: init.payload } : {}),
     };
     for (const cb of this.listeners) cb(glyph);
@@ -227,3 +245,5 @@ export function defineRecognizer<P = unknown, G = unknown>(
 ): RecognizerPlugin {
   return new SegmentingRecognizer(spec);
 }
+
+const clamp01 = (x: number) => Math.max(0, Math.min(1, x));

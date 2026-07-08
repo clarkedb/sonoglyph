@@ -118,15 +118,18 @@ describe('SegmentingRecognizer', () => {
 
   it('ignores frames of other streams', () => {
     const { recognizer, glyphs } = makeRecognizer();
-    recognizer.process({
-      stream: 'other',
-      version: 1,
-      time: 0,
-      span: SPAN,
-      hop: HOP,
-      data: { symbol: 'A', confidence: 1 },
-    });
-    feed(recognizer, GAP);
+    // A full press worth of matching frames — but on the wrong stream —
+    // followed by enough gap to have emitted it if it had counted.
+    [...PRESS, ...GAP].forEach((symbol, i) =>
+      recognizer.process({
+        stream: 'other',
+        version: 1,
+        time: i * HOP,
+        span: SPAN,
+        hop: HOP,
+        data: symbol === null ? null : { symbol, confidence: 0.9 },
+      }),
+    );
     expect(glyphs).toHaveLength(0);
   });
 
@@ -174,6 +177,35 @@ describe('SegmentingRecognizer', () => {
     const { recognizer, glyphs } = makeRecognizer({}, () => null);
     feed(recognizer, [...PRESS, ...GAP]);
     expect(glyphs).toHaveLength(0);
+  });
+
+  it('treats a finalize that returns nothing as a veto, not a crash', () => {
+    // A plain-JS author's side-effect-only arrow returns undefined.
+    const { recognizer, glyphs } = makeRecognizer({}, (() => {
+      /* observed the press, returned nothing */
+    }) as unknown as () => null);
+    feed(recognizer, [...PRESS, ...GAP]);
+    expect(glyphs).toHaveLength(0);
+  });
+
+  it('clamps a finalize-supplied confidence to 0..1', () => {
+    const { recognizer, glyphs } = makeRecognizer({}, () => ({ confidence: 5 }));
+    feed(recognizer, [...PRESS, ...GAP]);
+    expect(glyphs[0]!.confidence).toBe(1);
+  });
+
+  it('has already detached the press when a listener re-enters process()', () => {
+    const { recognizer, glyphs } = makeRecognizer();
+    const seen: string[] = [];
+    recognizer.onGlyph((g) => {
+      seen.push(g.symbol);
+      // Re-entrant frame from inside the emission: must start a fresh
+      // press, not mutate the finished (already-emitted) one.
+      recognizer.process(frame(1000, 'A'));
+    });
+    feed(recognizer, [...PRESS, ...GAP, ...PRESS, ...GAP]);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(glyphs.every((g) => g.symbol === 'A')).toBe(true);
   });
 
   it('clamps mean confidence to 0..1', () => {

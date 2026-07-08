@@ -1,4 +1,10 @@
-import type { DspEngine, FeatureFrame, Glyph, RecognizerPlugin, Unsubscribe } from '@sonoglyph/core';
+import type {
+  DspEngine,
+  FeatureFrame,
+  Glyph,
+  RecognizerPlugin,
+  Unsubscribe,
+} from '@sonoglyph/core';
 
 /**
  * Wires an engine to a set of recognizer plugins: push samples in, feature

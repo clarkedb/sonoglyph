@@ -166,7 +166,14 @@ describe('DtmfRecognizer (end to end on synthetic audio)', () => {
     expect(recognizer.metadata.requiredStreams).toEqual([STREAM_PEAKS]);
     const glyphs: Glyph[] = [];
     recognizer.onGlyph((g) => glyphs.push(g));
-    recognizer.process({ stream: 'envelope', version: 1, time: 0, span: 0.04, hop: 0.02, data: {} });
+    recognizer.process({
+      stream: 'envelope',
+      version: 1,
+      time: 0,
+      span: 0.04,
+      hop: 0.02,
+      data: {},
+    });
     expect(glyphs).toHaveLength(0);
   });
 });

@@ -2,11 +2,11 @@
 
 The plan is organized into phases, each ending at something demonstrable. Phases replace the original milestone framework; items within a phase are roughly ordered but not sacred. Architecture and rationale live in [architecture.md](./architecture.md).
 
-**Status: Phase 1 not started (planning complete).**
+**Status: Phase 1 built (2026-07-08).** All five workspace units exist; DTMF decodes end-to-end (verified in headless Chrome for the keypad/tone/WAV paths, including the full 16-key sequence, repeated digits, and rejection cases). Remaining before calling Phase 1 done: a human live-microphone check (hold a phone dialer up to the mic) and turning on branch protection once CI has run on GitHub.
 
 ## Phase 1 — Vertical slice
 
-**Goal:** open the playground, grant microphone access, play DTMF tones, and watch audio flow through every visible stage of the pipeline until the recognized digit appears — with each stage inspectable enough to understand *why* the recognizer decided what it did.
+**Goal:** open the playground, grant microphone access, play DTMF tones, and watch audio flow through every visible stage of the pipeline until the recognized digit appears — with each stage inspectable enough to understand _why_ the recognizer decided what it did.
 
 All TypeScript. No Rust, no website, no persistence.
 
@@ -55,7 +55,7 @@ Design the load-bearing contracts in `packages/core` before building against the
 - Magnitude spectrum → `spectrum` stream.
 - Peak detection with parabolic interpolation → `peaks` stream.
 - Amplitude envelope → `envelope` stream (cheap now, needed by Morse in Phase 2 — proves the multi-stream design isn't DTMF-shaped).
-- Defaults tuned for DTMF: 48 kHz, 4096-sample window (~12 Hz bins), 50% hop.
+- Defaults tuned for DTMF: 48 kHz, 2048-sample window (~23 Hz bins — enough with parabolic peak interpolation), 512-sample hop. _Learned in implementation:_ the originally planned 4096 window smears every tone across ~85 ms, which bridges real inter-digit gaps and inflates short tones past the 40 ms minimum — time resolution matters as much as frequency resolution here. Feature frames carry their analysis span so recognizers can correct for the smear.
 - Everything operates on plain `Float32Array`s and runs in Node — unit tests in Vitest against synthetic signals generated in code.
 
 ### 1.4 DTMF plugin
@@ -76,7 +76,7 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 - **Input** — microphone / tone generator / WAV upload.
 - **Waveform** — live time domain.
-- **Spectrum** — live FFT with hover cursor (exact frequency/amplitude); window size and function adjustable, so the resolution tradeoff is something you can *feel*.
+- **Spectrum** — live FFT with hover cursor (exact frequency/amplitude); window size and function adjustable, so the resolution tradeoff is something you can _feel_.
 - **Peaks** — detected peaks highlighted on the spectrum.
 - **Features** — human-readable live feature frames.
 - **Glyph timeline** — recognition history with timestamps, confidence, and payload (the "why did it decide that" view).
@@ -130,7 +130,7 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 ## Beyond
 
-Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the *Project Hail Mary* origin story), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
+Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the _Project Hail Mary_ origin story), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
 
 ## GitHub Actions
 
@@ -138,8 +138,8 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 
 `ci.yml` — on every PR and push to `main`:
 
-| Job | Steps |
-|---|---|
+| Job  | Steps                                                                                                                                                                                                              |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `ci` | checkout → pnpm + Node LTS (with pnpm store cache) → `pnpm install --frozen-lockfile` → `pnpm lint` (ESLint + Prettier check) → `pnpm typecheck` → `pnpm test` (Vitest) → `pnpm build` (all packages + playground) |
 
 Keep it one job while the repo is small; split lint/test/build into parallel jobs when total time makes it worth it. Branch protection on `main` requires CI green.

@@ -1,6 +1,6 @@
 # Sonoglyph Architecture
 
-Sonoglyph is a browser-first, extensible signal recognition framework. It separates the general problem of digital signal processing from the domain-specific problem of understanding what signals *mean*. The DSP engine never knows whether it is analyzing telephone tones, Morse code, musical chords, birdsong, or a fictional alien language — it transforms raw signals into reusable features, and plugins interpret those features according to their own rules.
+Sonoglyph is a browser-first, extensible signal recognition framework. It separates the general problem of digital signal processing from the domain-specific problem of understanding what signals _mean_. The DSP engine never knows whether it is analyzing telephone tones, Morse code, musical chords, birdsong, or a fictional alien language — it transforms raw signals into reusable features, and plugins interpret those features according to their own rules.
 
 This document describes the high-level architecture. The phased implementation plan lives in [roadmap.md](./roadmap.md).
 
@@ -12,12 +12,12 @@ Everything in Sonoglyph is organized around one conceptual pipeline:
 Samples  →  Features  →  Glyphs  →  Meaning
 ```
 
-| Stage | Produced by | Consumed by | Example (DTMF) |
-|---|---|---|---|
-| **Samples** | Audio sources (microphone, WAV file, tone generator) | DSP engine | 48 kHz float PCM |
-| **Features** | DSP engine | Recognizer plugins | Spectrum frames, detected peaks at 697 Hz and 1209 Hz |
-| **Glyphs** | Recognizer plugins | Translators, timeline, UI | The digit `1`, with time span and confidence |
-| **Meaning** | Translators | Applications | A dialed phone number |
+| Stage        | Produced by                                          | Consumed by               | Example (DTMF)                                        |
+| ------------ | ---------------------------------------------------- | ------------------------- | ----------------------------------------------------- |
+| **Samples**  | Audio sources (microphone, WAV file, tone generator) | DSP engine                | 48 kHz float PCM                                      |
+| **Features** | DSP engine                                           | Recognizer plugins        | Spectrum frames, detected peaks at 697 Hz and 1209 Hz |
+| **Glyphs**   | Recognizer plugins                                   | Translators, timeline, UI | The digit `1`, with time span and confidence          |
+| **Meaning**  | Translators                                          | Applications              | A dialed phone number                                 |
 
 Visualization components observe every stage without influencing any of them. Each stage is independently replaceable, and each boundary is a stable, documented interface.
 
@@ -28,12 +28,12 @@ A **glyph** is the symbolic representation of any recognized signal — the fram
 ```ts
 // Illustrative — final signatures are a Phase 1 deliverable.
 interface Glyph<P = unknown> {
-  symbol: string;      // "5", "-", "Cmaj", "♪♫"
-  pluginId: string;    // which recognizer emitted it
-  start: number;       // seconds, in stream time
-  duration: number;    // seconds
-  confidence: number;  // 0..1
-  payload?: P;         // plugin-defined (e.g. the detected frequencies)
+  symbol: string; // "5", "-", "Cmaj", "♪♫"
+  pluginId: string; // which recognizer emitted it
+  start: number; // seconds, in stream time
+  duration: number; // seconds
+  confidence: number; // 0..1
+  payload?: P; // plugin-defined (e.g. the detected frequencies)
 }
 ```
 
@@ -45,37 +45,37 @@ There is no single canonical "feature vector." Different signal systems need fun
 
 Instead, the DSP engine produces **named, versioned feature streams**:
 
-| Stream | Contents | Primary consumers |
-|---|---|---|
-| `spectrum` | Windowed FFT magnitudes per frame | Visualizations, most frequency-domain plugins |
-| `peaks` | Detected spectral peaks (frequency, amplitude, sharpness) | DTMF, chords, pitch-based plugins |
-| `envelope` | Amplitude envelope over time | Morse, rhythm-based plugins |
-| *(future)* `pitch`, `chroma`, `mfcc`, … | Added as plugins need them | Chords, birdsong, Rocky |
+| Stream                                  | Contents                                                  | Primary consumers                             |
+| --------------------------------------- | --------------------------------------------------------- | --------------------------------------------- |
+| `spectrum`                              | Windowed FFT magnitudes per frame                         | Visualizations, most frequency-domain plugins |
+| `peaks`                                 | Detected spectral peaks (frequency, amplitude, sharpness) | DTMF, chords, pitch-based plugins             |
+| `envelope`                              | Amplitude envelope over time                              | Morse, rhythm-based plugins                   |
+| _(future)_ `pitch`, `chroma`, `mfcc`, … | Added as plugins need them                                | Chords, birdsong, Rocky                       |
 
 Plugins declare which streams they require in their metadata; the pipeline runs only the extractors that some active consumer needs. Each stream carries a schema version so streams can evolve without breaking existing plugins.
 
 ```ts
 // Illustrative.
 interface FeatureFrame<T = unknown> {
-  stream: string;   // "spectrum" | "peaks" | "envelope" | ...
-  version: number;  // schema version of this stream
-  time: number;     // frame start, seconds in stream time
-  hop: number;      // seconds between frames
-  data: T;          // stream-specific payload
+  stream: string; // "spectrum" | "peaks" | "envelope" | ...
+  version: number; // schema version of this stream
+  time: number; // frame start, seconds in stream time
+  hop: number; // seconds between frames
+  data: T; // stream-specific payload
 }
 ```
 
 ### Recognizer plugins are stateful stream consumers
 
-Recognition is rarely a per-frame classification. DTMF needs debouncing (a tone must persist ~40 ms; a repeated digit needs a silence gap between events). Morse is *entirely* about durations of on/off states. So the plugin contract is push-in, emit-out:
+Recognition is rarely a per-frame classification. DTMF needs debouncing (a tone must persist ~40 ms; a repeated digit needs a silence gap between events). Morse is _entirely_ about durations of on/off states. So the plugin contract is push-in, emit-out:
 
 ```ts
 // Illustrative.
 interface RecognizerPlugin {
-  metadata: PluginMetadata;  // id, name, version, requiredStreams, options schema
-  process(frame: FeatureFrame): void;      // called for each frame of a required stream
+  metadata: PluginMetadata; // id, name, version, requiredStreams, options schema
+  process(frame: FeatureFrame): void; // called for each frame of a required stream
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe;
-  reset(): void;             // clear internal state (e.g. on source change)
+  reset(): void; // clear internal state (e.g. on source change)
 }
 ```
 
@@ -113,7 +113,7 @@ extractors → feature streams → plugins → glyphs → UI
 
 The AudioWorklet deliberately does **no DSP**. Worklet scope makes WASM loading and debugging painful, and nothing in the current scope is latency-sensitive enough to need in-worklet processing (DTMF tolerates tens of milliseconds easily). The worklet's only job is moving samples out reliably. This also keeps the entire DSP path runnable outside a live AudioContext, which is what makes deterministic testing possible: integration tests feed synthetic WAV data through the exact pipeline the microphone uses.
 
-A physics note that drives the defaults: DTMF's low-group frequencies are 73 Hz apart (697/770/852/941 Hz). At 48 kHz, cleanly separating them needs an FFT of at least 2048 samples (~23 Hz bins); 4096 (~12 Hz bins) is comfortable. That's a 43–85 ms analysis window — the window-size vs. frequency-resolution vs. time-resolution tradeoff is *the* central DSP tradeoff, and the playground should make it visible and adjustable.
+A physics note that drives the defaults: DTMF's low-group frequencies are 73 Hz apart (697/770/852/941 Hz). At 48 kHz, cleanly separating them needs an FFT of at least 2048 samples (~23 Hz bins); 4096 (~12 Hz bins) is comfortable. That's a 43–85 ms analysis window — the window-size vs. frequency-resolution vs. time-resolution tradeoff is _the_ central DSP tradeoff, and the playground should make it visible and adjustable.
 
 ## DSP engine: TypeScript now, Rust/WASM later
 

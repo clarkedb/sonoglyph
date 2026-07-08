@@ -19,11 +19,7 @@ const FORMAT_FLOAT = 3;
  * channel audio is mixed down to mono by averaging. */
 export function parseWav(buffer: ArrayBuffer): WavData {
   const view = new DataView(buffer);
-  if (
-    view.byteLength < 12 ||
-    readTag(view, 0) !== 'RIFF' ||
-    readTag(view, 8) !== 'WAVE'
-  ) {
+  if (view.byteLength < 12 || readTag(view, 0) !== 'RIFF' || readTag(view, 8) !== 'WAVE') {
     throw new Error('Not a WAV file (missing RIFF/WAVE header)');
   }
 

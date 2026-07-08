@@ -205,7 +205,8 @@ export class DtmfRecognizer implements RecognizerPlugin {
     let best: { peak: SpectralPeak; nominal: number; deviation: number } | null = null;
     for (const peak of peaks) {
       for (const nominal of group) {
-        const deviation = Math.abs(peak.frequencyHz - nominal) / (nominal * this.options.freqTolerance);
+        const deviation =
+          Math.abs(peak.frequencyHz - nominal) / (nominal * this.options.freqTolerance);
         if (deviation > 1) continue;
         if (!best || peak.magnitude > best.peak.magnitude) {
           best = { peak, nominal, deviation };

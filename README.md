@@ -8,11 +8,29 @@ Sonoglyph is a browser-first, extensible signal recognition framework. It provid
 Samples  →  Features  →  Glyphs  →  Meaning
 ```
 
-The core never knows what a signal means; plugins do. Every stage of the pipeline is observable, because the project is as much about *teaching* signal processing as performing it. Inspired by the translator in *Project Hail Mary*, generalized into a platform for recognizing any structured signal system.
+The core never knows what a signal means; plugins do. Every stage of the pipeline is observable, because the project is as much about _teaching_ signal processing as performing it. Inspired by the translator in _Project Hail Mary_, generalized into a platform for recognizing any structured signal system.
 
 ## Status
 
-Planning. The first vertical slice (live DTMF decoding in an interactive playground) is specced and not yet built.
+Phase 1 vertical slice built: DTMF decoding works end-to-end in the interactive playground — synthetic keypad, tone generator, WAV upload, and live microphone all flow through the same pipeline, with every stage visible. See the [roadmap](docs/roadmap.md) for what's next.
+
+## Quick start
+
+```bash
+pnpm install
+pnpm dev        # playground at http://localhost:5173
+pnpm test       # unit + integration tests (all signals synthesized in code)
+```
+
+## Workspace
+
+| Package                                | What it is                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [`packages/core`](packages/core)       | Shared contracts: `Glyph`, `FeatureFrame`, `RecognizerPlugin`, `DspEngine`, `AudioSource`. Types only, zero dependencies. |
+| [`packages/dsp`](packages/dsp)         | TypeScript reference DSP engine: windowing, radix-2 FFT, spectral peaks, envelope, and the pipeline runner.               |
+| [`packages/browser`](packages/browser) | Browser audio: microphone capture via a dumb AudioWorklet, ring buffer, WAV codec, streaming buffer source.               |
+| [`plugins/dtmf`](plugins/dtmf)         | The reference recognizer: all 16 DTMF keys from spectral peak pairs, with a debouncing state machine.                     |
+| [`apps/playground`](apps/playground)   | Vite + React playground: every pipeline stage live and inspectable.                                                       |
 
 ## Documentation
 

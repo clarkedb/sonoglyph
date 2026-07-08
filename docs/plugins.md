@@ -168,9 +168,11 @@ machine extracted from the DTMF reference plugin. Concretely:
   frame to a neighboring symbol, is absorbed — and credited to the
   duration, since the signal was evidently sounding through it.
 - **Span-corrected durations.** A tone appears in every analysis window
-  that overlaps it, so raw frame counts overstate duration by roughly
-  one window; the machine corrects for this before checking
-  `minDurationMs` and before reporting `glyph.duration`.
+  that overlaps it, so raw frame counts overstate duration by up to one
+  window; the machine subtracts half a window — the empirically honest
+  correction — before checking `minDurationMs` and reporting
+  `glyph.duration`, which therefore lands within about half a window of
+  the true duration.
 - **Emission on release.** The glyph is emitted when the press _ends_,
   so its duration covers the whole press.
 - **`finalize` superpowers.** Override the symbol (Morse decides dot

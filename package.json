@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @sonoglyph/playground dev",
+    "start": "pnpm dev",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "pnpm -r --if-present typecheck",

@@ -107,6 +107,35 @@ body {
   margin: 6px 0 0;
 }
 
+.phone-howto {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #8b98ab;
+  border: 1px dashed #2a3344;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.phone-howto summary {
+  cursor: pointer;
+  color: #9fb0c7;
+}
+
+.phone-howto p,
+.phone-howto ul {
+  line-height: 1.5;
+  margin: 6px 0 0;
+  padding-left: 0;
+}
+
+.phone-howto ul {
+  padding-left: 18px;
+}
+
+.phone-howto strong {
+  color: #b8c4d6;
+}
+
 button,
 select,
 input {

@@ -115,6 +115,29 @@ export function InputPanel() {
           </p>
         </div>
       </div>
+      <details className="phone-howto">
+        <summary>Use a real phone as the input</summary>
+        <p>
+          Start the microphone above, then open your smartphone’s Phone app and bring up its keypad
+          — no call needed. Turn the media volume up and take the phone off silent, hold it near
+          this device’s microphone, and tap digits: each tap plays the same two-tone pair this
+          keypad synthesizes.
+        </p>
+        <ul>
+          <li>
+            <strong>iPhone:</strong> keypad taps play tones out of the box; if you hear nothing,
+            flip the ring/silent switch to ring.
+          </li>
+          <li>
+            <strong>Android:</strong> if taps are silent, enable Settings → Sound & vibration →
+            “Dial pad tones” (wording varies by vendor).
+          </li>
+        </ul>
+        <p>
+          During a live call the keypad sends real DTMF down the line — that’s the same signaling
+          this recognizer decodes, in use since 1963.
+        </p>
+      </details>
       {error && <p className="error">{error}</p>}
     </Panel>
   );

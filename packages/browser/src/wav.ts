@@ -37,6 +37,9 @@ export function parseWav(buffer: ArrayBuffer): WavData {
     const size = view.getUint32(offset + 4, true);
     const body = offset + 8;
     if (tag === 'fmt ') {
+      if (size < 16 || body + 16 > view.byteLength) {
+        throw new Error('WAV fmt chunk is truncated');
+      }
       format = view.getUint16(body, true);
       channels = view.getUint16(body + 2, true);
       sampleRate = view.getUint32(body + 4, true);
@@ -50,9 +53,20 @@ export function parseWav(buffer: ArrayBuffer): WavData {
   }
 
   if (dataOffset === -1) throw new Error('WAV file has no data chunk');
-  if (channels < 1) throw new Error('WAV file has no channels');
+  if (channels < 1 || channels > 64) {
+    throw new Error(`WAV file has an invalid channel count (${channels})`);
+  }
   if (format !== FORMAT_PCM && format !== FORMAT_FLOAT) {
     throw new Error(`Unsupported WAV format code ${format} (only PCM and float)`);
+  }
+  // Header fields are attacker-controlled; bound them before they drive
+  // allocations downstream (ring buffers, silence padding).
+  if (sampleRate < 1 || sampleRate > 768_000) {
+    throw new Error(`WAV file has an invalid sample rate (${sampleRate} Hz)`);
+  }
+  const validBits = format === FORMAT_FLOAT ? [32, 64] : [8, 16, 24, 32];
+  if (!validBits.includes(bitsPerSample)) {
+    throw new Error(`Unsupported WAV bit depth ${bitsPerSample} for format code ${format}`);
   }
 
   const bytesPerSample = bitsPerSample / 8;

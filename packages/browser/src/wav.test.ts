@@ -59,6 +59,31 @@ describe('WAV codec', () => {
     expect(parsed.samples[1]).toBeCloseTo(0.5, 3);
   });
 
+  it('rejects hostile or nonsensical headers with clear errors', () => {
+    const base = () => encodeWavPcm16(new Float32Array(4), 8000);
+
+    const zeroRate = base();
+    new DataView(zeroRate).setUint32(24, 0, true);
+    expect(() => parseWav(zeroRate)).toThrow(/sample rate/);
+
+    const hugeRate = base();
+    new DataView(hugeRate).setUint32(24, 0xffffffff, true);
+    expect(() => parseWav(hugeRate)).toThrow(/sample rate/);
+
+    const zeroBits = base();
+    new DataView(zeroBits).setUint16(34, 0, true);
+    expect(() => parseWav(zeroBits)).toThrow(/bit depth/);
+
+    const zeroChannels = base();
+    new DataView(zeroChannels).setUint16(22, 0, true);
+    expect(() => parseWav(zeroChannels)).toThrow(/channel count/);
+
+    // fmt chunk that claims 16 bytes but is cut off by end of file.
+    const truncated = base().slice(0, 24);
+    new DataView(truncated).setUint32(4, 16, true);
+    expect(() => parseWav(truncated)).toThrow(/truncated/);
+  });
+
   it('rejects non-WAV data', () => {
     expect(() => parseWav(new ArrayBuffer(4))).toThrow(/Not a WAV/);
     expect(() => parseWav(new TextEncoder().encode('RIFFxxxxJUNK1234').buffer)).toThrow(

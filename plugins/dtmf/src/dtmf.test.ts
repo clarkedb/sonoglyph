@@ -156,7 +156,13 @@ describe('DtmfRecognizer (end to end on synthetic audio)', () => {
     // does not decode. (Somewhere below ~0.02 the 43 ms window's own
     // physics gives out; that regime is the Phase 2 Goertzel comparison.)
     const signal = mix(dtmfSignal('3', { amplitude: 0.03 }), fanNoise(1, 0.3));
-    expect(symbols(decode(signal))).toBe('3');
+    const glyphs = decode(signal);
+    expect(symbols(glyphs)).toBe('3');
+    // Absorbed noise blips must not dilute the averaged payload: the
+    // reported pair has to stay within the recognizer's own tolerance.
+    const payload = glyphs[0]!.payload!;
+    expect(Math.abs(payload.lowHz - 697)).toBeLessThan(697 * 0.02);
+    expect(Math.abs(payload.highHz - 1477)).toBeLessThan(1477 * 0.02);
   });
 
   it('still rejects a pair drowned out by a louder in-band tone', () => {

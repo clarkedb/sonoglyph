@@ -74,7 +74,12 @@ interface Tracking {
   startTime: number;
   /** Analysis window length of the frames, in seconds. */
   span: number;
+  /** Frames covering the press, including absorbed dropouts/blips — the
+   * basis for duration. */
   frameCount: number;
+  /** Frames that actually matched the key — the basis for the averaged
+   * payload and confidence (the sums below have this many terms). */
+  matchedFrames: number;
   /** Frames since the key was last seen (silence or another key). */
   gapFrames: number;
   sumConfidence: number;
@@ -126,6 +131,7 @@ export class DtmfRecognizer implements RecognizerPlugin {
       // duration: the tone was evidently sounding right through them.
       const t = this.tracking;
       t.frameCount += 1 + t.gapFrames;
+      t.matchedFrames++;
       t.gapFrames = 0;
       t.sumConfidence += match.confidence;
       t.sumLowHz += match.lowHz;
@@ -153,6 +159,7 @@ export class DtmfRecognizer implements RecognizerPlugin {
         startTime: frame.time,
         span: frame.span,
         frameCount: 1,
+        matchedFrames: 1,
         gapFrames: 0,
         sumConfidence: match.confidence,
         sumLowHz: match.lowHz,
@@ -246,13 +253,13 @@ export class DtmfRecognizer implements RecognizerPlugin {
       pluginId: this.metadata.id,
       start: t.startTime,
       duration,
-      confidence: Math.max(0, Math.min(1, t.sumConfidence / t.frameCount)),
+      confidence: Math.max(0, Math.min(1, t.sumConfidence / t.matchedFrames)),
       payload: {
-        lowHz: t.sumLowHz / t.frameCount,
-        highHz: t.sumHighHz / t.frameCount,
+        lowHz: t.sumLowHz / t.matchedFrames,
+        highHz: t.sumHighHz / t.matchedFrames,
         nominalLowHz: t.nominalLowHz,
         nominalHighHz: t.nominalHighHz,
-        twistDb: t.sumTwistDb / t.frameCount,
+        twistDb: t.sumTwistDb / t.matchedFrames,
       },
     };
     for (const cb of this.listeners) cb(glyph);

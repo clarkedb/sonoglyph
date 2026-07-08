@@ -52,7 +52,7 @@ Instead, the DSP engine produces **named, versioned feature streams**:
 | `envelope`                              | Amplitude envelope over time                              | Morse, rhythm-based plugins                   |
 | _(future)_ `pitch`, `chroma`, `mfcc`, … | Added as plugins need them                                | Chords, birdsong, Rocky                       |
 
-Plugins declare which streams they require in their metadata; the pipeline runs only the extractors that some active consumer needs. Each stream carries a schema version so streams can evolve without breaking existing plugins.
+Plugins declare which streams they require in their metadata, and the pipeline delivers each stream's frames only to the plugins that declared it. (Which extractors _run_ is engine configuration today; deriving it from the active plugins' declarations is planned for when plugin sets become dynamic.) Each stream carries a schema version so streams can evolve without breaking existing plugins.
 
 ```ts
 // Illustrative.
@@ -60,6 +60,7 @@ interface FeatureFrame<T = unknown> {
   stream: string; // "spectrum" | "peaks" | "envelope" | ...
   version: number; // schema version of this stream
   time: number; // frame start, seconds in stream time
+  span: number; // seconds of signal the frame describes (analysis window)
   hop: number; // seconds between frames
   data: T; // stream-specific payload
 }
@@ -72,7 +73,7 @@ Recognition is rarely a per-frame classification. DTMF needs debouncing (a tone 
 ```ts
 // Illustrative.
 interface RecognizerPlugin {
-  metadata: PluginMetadata; // id, name, version, requiredStreams, options schema
+  metadata: PluginMetadata; // id, name, version, requiredStreams (options schema arrives with the Phase 2 plugin SDK)
   process(frame: FeatureFrame): void; // called for each frame of a required stream
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe;
   reset(): void; // clear internal state (e.g. on source change)
@@ -89,7 +90,8 @@ apps/playground          Interactive analysis environment (Vite + React)
 plugins/dtmf, ...        Recognizers + translators (consume core interfaces only)
         │
 packages/browser         Microphone, AudioWorklet, ring buffer, WAV loading
-packages/dsp             DSP engine: windowing, FFT, peak detection, extractors
+packages/dsp             DSP engine (windowing, FFT, peak detection, extractors)
+                         + the Pipeline runner that wires an engine to plugins
         │
 packages/core            Interfaces & types only: Glyph, FeatureFrame,
                          RecognizerPlugin, DspEngine, AudioSource. No browser code.
@@ -99,7 +101,7 @@ Rules that keep the layers honest:
 
 - `core` has **zero dependencies** and no browser APIs. It is the contract everyone shares.
 - `dsp` depends only on `core` and operates on plain `Float32Array`s — it runs identically in the browser, in a Worker, and in Node (which is what makes it testable in Vitest).
-- Plugins depend only on `core` (and eventually `plugin-sdk`). A plugin author never imports from `dsp` or `browser`.
+- Plugins depend only on `core` (and eventually `plugin-sdk`). A plugin author never imports from `dsp` or `browser` in plugin code. (Plugin _tests_ currently use `dsp` as a devDependency to drive the real pipeline; the Phase 2 testing module absorbs that.)
 - Visualization reads from the pipeline through the same event interfaces as everything else; it can never influence recognition.
 - The repo structure serves the project — packages are split only when a second consumer proves the boundary. `plugin-sdk`, `react`, `storage`, etc. are extracted later, from working code, not scaffolded up front.
 

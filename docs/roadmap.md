@@ -40,7 +40,7 @@ Design the load-bearing contracts in `packages/core` before building against the
 - `RecognizerPlugin` — stateful stream consumer: `process(frame)` in, glyphs emitted asynchronously, `reset()`. Segmentation state lives in the plugin.
 - `DspEngine` — samples in, feature frames out; configurable window size, hop, window function.
 - `AudioSource` — microphone, WAV file, generated tones behind one interface.
-- `PluginMetadata` — id, name, version, required streams, options schema.
+- `PluginMetadata` — id, name, version, required streams. (Options schema deferred to the Phase 2 plugin SDK, where options handling lives.)
 
 ### 1.2 Browser audio
 
@@ -143,7 +143,7 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lint`  | checkout → pnpm + Node (versions pinned via `packageManager` / `.nvmrc`, pnpm store cache) → `pnpm install --frozen-lockfile` → `pnpm lint` (ESLint + Prettier check) → `pnpm typecheck` |
 | `test`  | same setup → `pnpm test` (Vitest)                                                                                                                                                        |
-| `build` | same setup → `pnpm build` (all packages + playground); `needs: [checks, test]`, so a green `build` means the whole pipeline passed                                                       |
+| `build` | same setup → `pnpm build` (all packages + playground); `needs: [lint, test]`, so a green `build` means the whole pipeline passed                                                         |
 
 `lint` and `test` run in parallel; `build` gates on both, so branch protection on `main` only needs to require `build`. Actions are pinned to release commit SHAs with the semantic tag as a comment; Dependabot keeps the pins fresh.
 

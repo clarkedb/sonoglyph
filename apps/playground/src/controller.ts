@@ -10,9 +10,17 @@ import type {
 } from '@sonoglyph/core';
 import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SPECTRUM } from '@sonoglyph/core';
 import { BufferSource, MicrophoneSource, parseWav, RingBuffer } from '@sonoglyph/browser';
-import { DEFAULT_ENGINE_OPTIONS, Pipeline, tones, TsDspEngine } from '@sonoglyph/dsp';
+import {
+  concat,
+  DEFAULT_ENGINE_OPTIONS,
+  Pipeline,
+  silence,
+  tones,
+  TsDspEngine,
+} from '@sonoglyph/dsp';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
+import { MorseRecognizer, MorseTextTranslator, morseTiming } from '@sonoglyph/plugin-morse';
 
 export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
 
@@ -25,6 +33,7 @@ export interface PlaygroundStatus {
   windowSize: number;
   window: WindowName;
   decoders: DecoderChoice;
+  morseEnabled: boolean;
   samplesReceived: number;
   chunksReceived: number;
 }
@@ -43,7 +52,10 @@ export class PlaygroundController {
   private pipeline: Pipeline | null = null;
   private readonly fftRecognizer = new DtmfRecognizer();
   private readonly goertzelRecognizer = new GoertzelDtmfRecognizer();
+  private readonly morseRecognizer = new MorseRecognizer();
+  private readonly morseTranslator = new MorseTextTranslator();
   private decoders: DecoderChoice = 'fft';
+  private morseEnabled = false;
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
 
@@ -60,12 +72,15 @@ export class PlaygroundController {
     envelope?: FeatureFrame<EnvelopeData>;
   } = {};
   glyphs: Glyph[] = [];
+  /** The Morse translator's running transcript (the Meaning layer). */
+  morseText = '';
   status: PlaygroundStatus = {
     mode: 'idle',
     sampleRate: DEFAULT_ENGINE_OPTIONS.sampleRate,
     windowSize: DEFAULT_ENGINE_OPTIONS.windowSize,
     window: DEFAULT_ENGINE_OPTIONS.window,
     decoders: 'fft',
+    morseEnabled: false,
     samplesReceived: 0,
     chunksReceived: 0,
   };
@@ -87,11 +102,15 @@ export class PlaygroundController {
     for (const cb of this.listeners) cb();
   }
 
-  /** The recognizers the current decoder choice puts on the pipeline. */
-  private activeRecognizers(): (DtmfRecognizer | GoertzelDtmfRecognizer)[] {
-    if (this.decoders === 'fft') return [this.fftRecognizer];
-    if (this.decoders === 'goertzel') return [this.goertzelRecognizer];
-    return [this.fftRecognizer, this.goertzelRecognizer];
+  /** The recognizers the current choices put on the pipeline. */
+  private activeRecognizers(): (DtmfRecognizer | GoertzelDtmfRecognizer | MorseRecognizer)[] {
+    const dtmf =
+      this.decoders === 'fft'
+        ? [this.fftRecognizer]
+        : this.decoders === 'goertzel'
+          ? [this.goertzelRecognizer]
+          : [this.fftRecognizer, this.goertzelRecognizer];
+    return this.morseEnabled ? [...dtmf, this.morseRecognizer] : dtmf;
   }
 
   private buildPipeline(): Pipeline {
@@ -103,6 +122,7 @@ export class PlaygroundController {
     this.pipeline?.dispose();
     this.fftRecognizer.reset();
     this.goertzelRecognizer.reset();
+    this.morseRecognizer.reset();
     const recognizers = this.activeRecognizers();
     // Compute the streams the panels always need plus whatever the active
     // recognizers declare (the Goertzel one wants raw `samples`).
@@ -127,6 +147,10 @@ export class PlaygroundController {
     });
     this.glyphUnsub = pipeline.onGlyph((glyph) => {
       this.glyphs = [...this.glyphs, glyph];
+      // The Meaning layer: the translator reads the glyph stream and
+      // keeps the transcript; it ignores glyphs it doesn't understand.
+      this.morseTranslator.push(glyph);
+      this.morseText = this.morseTranslator.value;
       this.notify();
     });
     this.status.sampleRate = this.engineOptions.sampleRate;
@@ -146,6 +170,38 @@ export class PlaygroundController {
     this.decoders = choice;
     this.pipeline = this.buildPipeline();
     this.notify();
+  }
+
+  /** Put the Morse recognizer on (or off) the pipeline. */
+  setMorseEnabled(enabled: boolean): void {
+    if (enabled === this.morseEnabled) return;
+    this.morseEnabled = enabled;
+    this.status.morseEnabled = enabled;
+    this.pipeline = this.buildPipeline();
+    this.notify();
+  }
+
+  /**
+   * Key a text as Morse audio: dots, dashes, and the silences between
+   * them, straight from the plugin's own timing table. The default 120 ms
+   * unit (~10 WPM) keeps every gap comfortably wider than the analysis
+   * window, so the envelope stream can actually see them.
+   */
+  async playMorse(text: string, unitMs = 120, frequencyHz = 600, amplitude = 0.35): Promise<void> {
+    const sampleRate = this.engineOptions.sampleRate;
+    const parts = morseTiming(text).map((segment) => {
+      const durationSec = (segment.units * unitMs) / 1000;
+      return segment.on
+        ? applyFade(tones([{ frequencyHz, amplitude }], durationSec, sampleRate), sampleRate)
+        : silence(durationSec, sampleRate);
+    });
+    if (parts.length === 0) return;
+    // A word gap of trailing silence, in the signal itself: the last
+    // letter only closes once ~2 units of silence have flowed through
+    // the pipeline as frames, and it reads as a word break if more Morse
+    // follows in a later buffer.
+    parts.push(silence((7 * unitMs) / 1000, sampleRate));
+    await this.playBuffer(concat(...parts), sampleRate);
   }
 
   private handleSamples = (samples: Float32Array): void => {
@@ -298,6 +354,8 @@ export class PlaygroundController {
 
   clearGlyphs(): void {
     this.glyphs = [];
+    this.morseTranslator.reset();
+    this.morseText = '';
     this.notify();
   }
 }

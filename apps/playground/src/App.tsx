@@ -4,6 +4,7 @@ import { ControllerContext } from './hooks.js';
 import { FeaturesPanel } from './components/FeaturesPanel.js';
 import { GlyphTimeline } from './components/GlyphTimeline.js';
 import { InputPanel } from './components/InputPanel.js';
+import { MorsePanel } from './components/MorsePanel.js';
 import { SpectrumPanel } from './components/SpectrumPanel.js';
 import { WaveformPanel } from './components/WaveformPanel.js';
 
@@ -24,6 +25,7 @@ export function App() {
         <SpectrumPanel />
         <FeaturesPanel />
         <GlyphTimeline />
+        <MorsePanel />
       </main>
     </ControllerContext.Provider>
   );

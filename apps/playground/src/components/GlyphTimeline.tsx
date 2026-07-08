@@ -1,5 +1,6 @@
 import type { Glyph } from '@sonoglyph/core';
 import type { DtmfPayload, GoertzelDtmfPayload } from '@sonoglyph/plugin-dtmf';
+import type { MorseElementPayload, MorseLetterPayload } from '@sonoglyph/plugin-morse';
 import type { DecoderChoice } from '../controller.js';
 import { useController, useControllerTick } from '../hooks.js';
 import { Panel } from './Panel.js';
@@ -20,16 +21,30 @@ const EXPLAINER =
 const DECODER_LABELS: Record<string, string> = {
   dtmf: 'FFT',
   'dtmf-goertzel': 'Goertzel',
+  morse: 'Morse',
 };
 
 const decoderLabel = (pluginId: string) => DECODER_LABELS[pluginId] ?? pluginId;
 
 const CELL = 'border-b border-edge-soft py-1 pr-2';
 
-/** The payload cells, for whichever DTMF payload shape the glyph carries. */
+/** The payload cells, for whichever payload shape the glyph carries. */
 function payloadText(glyph: Glyph): { pair: string; detail: string } {
-  const payload = glyph.payload as Partial<DtmfPayload & GoertzelDtmfPayload> | undefined;
+  const payload = glyph.payload as
+    | Partial<DtmfPayload & GoertzelDtmfPayload & MorseElementPayload & MorseLetterPayload>
+    | undefined;
   if (!payload) return { pair: '—', detail: '—' };
+  if (payload.code !== undefined) {
+    return {
+      pair: `code ${payload.code}`,
+      detail: Number.isFinite(payload.gapUnits)
+        ? `${payload.gapUnits!.toFixed(1)} units of silence before`
+        : '—',
+    };
+  }
+  if (payload.units !== undefined) {
+    return { pair: '—', detail: `${payload.units.toFixed(1)} units long` };
+  }
   const detail = payload.twistDb !== undefined ? `${payload.twistDb.toFixed(1)} dB twist` : '—';
   if (payload.lowHz !== undefined && payload.highHz !== undefined) {
     return {
@@ -39,10 +54,14 @@ function payloadText(glyph: Glyph): { pair: string; detail: string } {
       detail,
     };
   }
-  return {
-    pair: `nominal ${payload.nominalLowHz} + ${payload.nominalHighHz} Hz`,
-    detail: payload.snrDb !== undefined ? `${detail} · ${payload.snrDb.toFixed(0)} dB SNR` : detail,
-  };
+  if (payload.nominalLowHz !== undefined) {
+    return {
+      pair: `nominal ${payload.nominalLowHz} + ${payload.nominalHighHz} Hz`,
+      detail:
+        payload.snrDb !== undefined ? `${detail} · ${payload.snrDb.toFixed(0)} dB SNR` : detail,
+    };
+  }
+  return { pair: '—', detail };
 }
 
 export function GlyphTimeline() {
@@ -50,12 +69,17 @@ export function GlyphTimeline() {
   useControllerTick();
   const glyphs = controller.glyphs;
   const decoders = controller.status.decoders;
-  const comparing = decoders === 'both';
-  // Chip rows: one per active decoder, so "did they agree?" is one glance.
+  const activeIds = [
+    ...(decoders === 'both'
+      ? ['dtmf', 'dtmf-goertzel']
+      : [decoders === 'fft' ? 'dtmf' : 'dtmf-goertzel']),
+    ...(controller.status.morseEnabled ? ['morse'] : []),
+  ];
+  // Label which plugin emitted each glyph whenever more than one runs.
+  const comparing = activeIds.length > 1;
+  // Chip rows: one per active plugin, so "did they agree?" is one glance.
   const chipRows = comparing
-    ? ['dtmf', 'dtmf-goertzel'].map(
-        (id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const,
-      )
+    ? activeIds.map((id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const)
     : [['', glyphs] as const];
 
   return (

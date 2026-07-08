@@ -1,0 +1,22 @@
+{
+  "name": "@sonoglyph/plugin-morse",
+  "version": "0.1.0",
+  "description": "Morse recognizer plugin for Sonoglyph — time-domain recognition off the envelope stream, letters and text via the Meaning layer",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sonoglyph/core": "workspace:*",
+    "@sonoglyph/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@sonoglyph/dsp": "workspace:*",
+    "@sonoglyph/testing": "workspace:*"
+  }
+}

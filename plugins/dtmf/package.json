@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "@sonoglyph/core": "workspace:*",
+    "@sonoglyph/dsp": "workspace:*",
     "@sonoglyph/plugin-sdk": "workspace:*"
   },
   "devDependencies": {
-    "@sonoglyph/dsp": "workspace:*",
     "@sonoglyph/testing": "workspace:*"
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { EnvelopeData, PeaksData, SpectrumData } from '@sonoglyph/core';
-import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SPECTRUM } from '@sonoglyph/core';
+import type { EnvelopeData, PeaksData, SamplesData, SpectrumData } from '@sonoglyph/core';
+import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SAMPLES, STREAM_SPECTRUM } from '@sonoglyph/core';
 import { TsDspEngine } from './engine.js';
 import { silence, sine } from './generate.js';
 
@@ -88,5 +88,37 @@ describe('TsDspEngine', () => {
   it('rejects invalid configuration', () => {
     expect(() => new TsDspEngine({ windowSize: 1000 })).toThrow(/power of two/);
     expect(() => new TsDspEngine({ windowSize: 1024, hopSize: 2048 })).toThrow(/hopSize/);
+  });
+});
+
+describe('samples stream', () => {
+  it('carries an independent copy of the raw analysis frame', () => {
+    const engine = new TsDspEngine({
+      sampleRate: SAMPLE_RATE,
+      windowSize: 1024,
+      hopSize: 512,
+      streams: [STREAM_SAMPLES],
+    });
+    const signal = sine(440, 2048 / SAMPLE_RATE, SAMPLE_RATE, 0.5);
+    const frames = engine.push(signal);
+    expect(frames.length).toBe(3);
+    const first = frames[0]!.data as SamplesData;
+    expect(first.samples.length).toBe(1024);
+    expect(frames[0]!.span).toBeCloseTo(1024 / SAMPLE_RATE, 9);
+    // Raw and unwindowed: exactly the input samples.
+    for (let i = 0; i < 8; i++) {
+      expect(first.samples[i]).toBe(signal[i]);
+    }
+    // A copy, not a view into the engine's reused buffer: pushing more
+    // samples must not mutate an already-emitted frame.
+    const held = first.samples.slice();
+    engine.push(silence(0.1, SAMPLE_RATE));
+    expect(first.samples).toEqual(held);
+  });
+
+  it('is not computed unless requested', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE });
+    const frames = engine.push(silence(0.1, SAMPLE_RATE));
+    expect(frames.some((f) => f.stream === STREAM_SAMPLES)).toBe(false);
   });
 });

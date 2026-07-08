@@ -4,9 +4,10 @@ import type {
   EnvelopeData,
   FeatureFrame,
   PeaksData,
+  SamplesData,
   SpectrumData,
 } from '@sonoglyph/core';
-import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SPECTRUM } from '@sonoglyph/core';
+import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SAMPLES, STREAM_SPECTRUM } from '@sonoglyph/core';
 import { Fft } from './fft.js';
 import { detectPeaks } from './peaks.js';
 import { makeWindow, windowSum } from './window.js';
@@ -14,6 +15,7 @@ import { makeWindow, windowSum } from './window.js';
 export const SPECTRUM_VERSION = 1;
 export const PEAKS_VERSION = 1;
 export const ENVELOPE_VERSION = 1;
+export const SAMPLES_VERSION = 1;
 
 /**
  * Defaults tuned for DTMF at 48 kHz. A 2048-sample window gives ~23 Hz bins
@@ -123,6 +125,13 @@ export class TsDspEngine implements DspEngine {
         const data: PeaksData = { peaks: detectPeaks(magnitudes, { binHz: this.binHz }) };
         out.push({ stream: STREAM_PEAKS, version: PEAKS_VERSION, time, span, hop, data });
       }
+    }
+
+    if (streams.includes(STREAM_SAMPLES)) {
+      // A copy, not a subarray: the engine reuses its buffer, and samples
+      // consumers (unlike spectrum/peaks ones) may hold frames across hops.
+      const data: SamplesData = { samples: frame.slice() };
+      out.push({ stream: STREAM_SAMPLES, version: SAMPLES_VERSION, time, span, hop, data });
     }
 
     if (streams.includes(STREAM_ENVELOPE)) {

@@ -114,13 +114,13 @@ importers:
       '@sonoglyph/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../../packages/dsp
       '@sonoglyph/plugin-sdk':
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
     devDependencies:
-      '@sonoglyph/dsp':
-        specifier: workspace:*
-        version: link:../../packages/dsp
       '@sonoglyph/testing':
         specifier: workspace:*
         version: link:../../packages/testing

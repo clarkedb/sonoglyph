@@ -1,5 +1,5 @@
 import type { DspEngineOptions, Glyph, RecognizerPlugin } from '@sonoglyph/core';
-import { Pipeline, TsDspEngine } from '@sonoglyph/dsp';
+import { DEFAULT_ENGINE_OPTIONS, Pipeline, TsDspEngine } from '@sonoglyph/dsp';
 
 export interface DecodeOptions {
   /** Sample rate of the signal. Defaults to 48 kHz, the engine default. */
@@ -28,8 +28,17 @@ export function decode(
   options: DecodeOptions = {},
 ): Glyph[] {
   const { sampleRate = 48_000, engineOptions = {}, chunkSize = 128 } = options;
-  const pipeline = new Pipeline(new TsDspEngine({ sampleRate, ...engineOptions }));
-  for (const plugin of Array.isArray(plugins) ? plugins : [plugins]) {
+  const pluginList = Array.isArray(plugins) ? plugins : [plugins];
+  // Compute whatever the plugins declare they need, on top of the engine
+  // defaults — a plugin's requiredStreams should be all it takes to test it.
+  const streams = engineOptions.streams ?? [
+    ...new Set([
+      ...DEFAULT_ENGINE_OPTIONS.streams,
+      ...pluginList.flatMap((p) => p.metadata.requiredStreams),
+    ]),
+  ];
+  const pipeline = new Pipeline(new TsDspEngine({ sampleRate, ...engineOptions, streams }));
+  for (const plugin of pluginList) {
     pipeline.addPlugin(plugin);
   }
   const glyphs: Glyph[] = [];

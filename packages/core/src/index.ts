@@ -67,6 +67,7 @@ export interface FeatureFrame<T = unknown> {
 export const STREAM_SPECTRUM = 'spectrum';
 export const STREAM_PEAKS = 'peaks';
 export const STREAM_ENVELOPE = 'envelope';
+export const STREAM_SAMPLES = 'samples';
 
 /** Payload of the `spectrum` stream (version 1). */
 export interface SpectrumData {
@@ -99,6 +100,17 @@ export interface EnvelopeData {
   rms: number;
   /** Largest absolute sample value in the frame. */
   peak: number;
+}
+
+/**
+ * Payload of the `samples` stream (version 1): the raw, unwindowed samples
+ * of the analysis frame, for plugins that own their spectral strategy
+ * (e.g. Goertzel filters at known frequencies) instead of consuming the
+ * engine's FFT-derived streams. Same cadence and span as `spectrum`.
+ */
+export interface SamplesData {
+  /** The frame's samples — a copy the consumer may hold onto. */
+  samples: Float32Array;
 }
 
 // ---------------------------------------------------------------------------

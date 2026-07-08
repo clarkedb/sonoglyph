@@ -1,0 +1,4 @@
+# Reinstall when a merge/pull changed the lockfile.
+if git diff --name-only ORIG_HEAD HEAD 2>/dev/null | grep -q '^pnpm-lock.yaml$'; then
+  pnpm install
+fi

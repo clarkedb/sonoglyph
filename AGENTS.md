@@ -5,9 +5,10 @@ Sonoglyph is a browser-first signal recognition framework — see
 [docs/roadmap.md](docs/roadmap.md) for the plan. Those two files are the
 source of truth; update them when a change invalidates them.
 
-Everyday commands: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`,
-`pnpm dev` (playground). Node version is pinned in `.nvmrc`; pnpm in
-`package.json#packageManager`.
+Fresh clone or worktree: `pnpm run bootstrap` (verifies the pinned Node
+version, installs deps and git hooks). Everyday commands: `pnpm lint`,
+`pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm dev` (playground).
+Node version is pinned in `.nvmrc`; pnpm in `package.json#packageManager`.
 
 ## Skills
 

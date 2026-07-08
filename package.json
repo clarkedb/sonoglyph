@@ -14,6 +14,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
     "build": "pnpm -r --if-present build",
+    "bootstrap": "sh scripts/bootstrap.sh",
     "prepare": "husky"
   },
   "lint-staged": {

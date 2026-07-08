@@ -17,9 +17,9 @@ Phase 1 vertical slice built: DTMF decoding works end-to-end in the interactive 
 ## Quick start
 
 ```bash
-pnpm install
-pnpm dev        # playground at http://localhost:5173
-pnpm test       # unit + integration tests (all signals synthesized in code)
+pnpm run bootstrap   # fresh clone/worktree: checks Node version, installs deps + git hooks
+pnpm dev             # playground at http://localhost:5173
+pnpm test            # unit + integration tests (all signals synthesized in code)
 ```
 
 ## Workspace

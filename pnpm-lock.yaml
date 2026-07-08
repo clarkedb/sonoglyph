@@ -96,6 +96,19 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/testing:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../core
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../dsp
+    devDependencies:
+      '@sonoglyph/plugin-sdk':
+        specifier: workspace:*
+        version: link:../plugin-sdk
+
   plugins/dtmf:
     dependencies:
       '@sonoglyph/core':
@@ -108,6 +121,9 @@ importers:
       '@sonoglyph/dsp':
         specifier: workspace:*
         version: link:../../packages/dsp
+      '@sonoglyph/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
 
 packages:
 

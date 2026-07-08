@@ -1,7 +1,7 @@
 {
-  "name": "@sonoglyph/plugin-dtmf",
+  "name": "@sonoglyph/testing",
   "version": "0.1.0",
-  "description": "DTMF recognizer plugin for Sonoglyph — the reference plugin implementation",
+  "description": "Sonoglyph plugin testing module — signal builders and a decode harness for testing recognition under realistic conditions",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -13,10 +13,9 @@
   },
   "dependencies": {
     "@sonoglyph/core": "workspace:*",
-    "@sonoglyph/plugin-sdk": "workspace:*"
+    "@sonoglyph/dsp": "workspace:*"
   },
   "devDependencies": {
-    "@sonoglyph/dsp": "workspace:*",
-    "@sonoglyph/testing": "workspace:*"
+    "@sonoglyph/plugin-sdk": "workspace:*"
   }
 }

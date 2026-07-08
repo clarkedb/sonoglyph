@@ -30,6 +30,12 @@ importers:
         specifier: ^4.1.10
         version: 4.1.10(vite@8.1.3)
 
+  packages/browser:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/core: {}
 
   packages/dsp:

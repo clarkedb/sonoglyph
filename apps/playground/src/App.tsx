@@ -12,13 +12,13 @@ export function App() {
 
   return (
     <ControllerContext.Provider value={controller}>
-      <header className="app-header">
-        <h1>Sonoglyph playground</h1>
-        <p>
+      <header className="px-6 pt-4 pb-1">
+        <h1 className="text-xl font-bold tracking-wide">Sonoglyph playground</h1>
+        <p className="mt-0.5 text-muted">
           samples → features → glyphs → meaning · every stage of the pipeline, live and inspectable
         </p>
       </header>
-      <main className="panel-grid">
+      <main className="grid grid-cols-1 gap-3.5 px-6 pt-4 pb-10 md:grid-cols-2">
         <InputPanel />
         <WaveformPanel />
         <SpectrumPanel />

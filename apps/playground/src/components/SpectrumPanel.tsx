@@ -21,6 +21,8 @@ const MAX_FREQ_CHOICES = [2500, 5000, 12000, 24000];
 
 const toDb = (mag: number) => Math.max(DB_FLOOR, 20 * Math.log10(mag + 1e-9));
 
+const LABEL = 'flex items-center gap-1.5 text-xs text-muted';
+
 export function SpectrumPanel() {
   const controller = useController();
   useControllerTick();
@@ -124,10 +126,10 @@ export function SpectrumPanel() {
     <Panel
       title="Spectrum & peaks"
       explainer={EXPLAINER}
-      className="panel-wide"
+      className="col-span-full"
       controls={
         <>
-          <label>
+          <label className={LABEL}>
             Window
             <select
               value={windowSize}
@@ -143,7 +145,7 @@ export function SpectrumPanel() {
               ))}
             </select>
           </label>
-          <label>
+          <label className={LABEL}>
             Function
             <select
               value={windowName}
@@ -158,7 +160,7 @@ export function SpectrumPanel() {
               ))}
             </select>
           </label>
-          <label>
+          <label className={LABEL}>
             Max freq
             <select value={maxFreq} onChange={(event) => setMaxFreq(Number(event.target.value))}>
               {MAX_FREQ_CHOICES.map((hz) => (
@@ -173,7 +175,7 @@ export function SpectrumPanel() {
     >
       <canvas
         ref={canvasRef}
-        className="viz-canvas viz-canvas-tall"
+        className="block h-[260px] w-full cursor-crosshair rounded-[5px] bg-canvas"
         onMouseMove={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();
           hoverRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };

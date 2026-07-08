@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 
 /** A titled panel with a collapsible explainer — the playground's
- * educational content lives as annotations on the live pipeline. */
+ * educational content lives as annotations on the live pipeline.
+ * The bare `panel` class is a semantic marker (used by tests), not a style. */
 export function Panel({
   title,
   explainer,
@@ -16,15 +17,17 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`panel ${className ?? ''}`}>
-      <header className="panel-header">
-        <h2>{title}</h2>
-        <div className="panel-controls">{controls}</div>
+    <section
+      className={`panel flex min-w-0 flex-col rounded-lg border border-edge bg-panel px-3.5 py-3 ${className ?? ''}`}
+    >
+      <header className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold tracking-[0.08em] text-heading uppercase">{title}</h2>
+        <div className="flex flex-wrap items-center gap-2.5">{controls}</div>
       </header>
-      <div className="panel-body">{children}</div>
-      <details className="panel-explainer">
-        <summary>What am I looking at?</summary>
-        <p>{explainer}</p>
+      <div className="flex-1">{children}</div>
+      <details className="mt-2.5 text-[12.5px] text-soft">
+        <summary className="cursor-pointer text-faint">What am I looking at?</summary>
+        <p className="mt-1.5 leading-normal">{explainer}</p>
       </details>
     </section>
   );

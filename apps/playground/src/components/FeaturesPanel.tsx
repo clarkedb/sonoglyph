@@ -51,22 +51,24 @@ export function FeaturesPanel() {
   return (
     <Panel title="Feature frames" explainer={EXPLAINER}>
       {snapshot ? (
-        <dl className="features">
-          <dt>stream time</dt>
-          <dd>{snapshot.time}</dd>
-          <dt>envelope</dt>
-          <dd>{snapshot.envelope}</dd>
-          <dt>peaks</dt>
-          <dd>
+        <dl className="features grid grid-cols-[auto_1fr] gap-x-3.5 gap-y-1.5 font-mono text-[12.5px]">
+          <dt className="text-muted">stream time</dt>
+          <dd className="tabular-nums">{snapshot.time}</dd>
+          <dt className="text-muted">envelope</dt>
+          <dd className="tabular-nums">{snapshot.envelope}</dd>
+          <dt className="text-muted">peaks</dt>
+          <dd className="tabular-nums">
             {snapshot.peaks.map((line, i) => (
               <div key={i}>{line}</div>
             ))}
           </dd>
-          <dt>spectrum</dt>
-          <dd>{snapshot.spectrum}</dd>
+          <dt className="text-muted">spectrum</dt>
+          <dd className="tabular-nums">{snapshot.spectrum}</dd>
         </dl>
       ) : (
-        <p className="hint">Start an input to see live feature frames.</p>
+        <p className="text-[12.5px] leading-normal text-faint">
+          Start an input to see live feature frames.
+        </p>
       )}
     </Panel>
   );

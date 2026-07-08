@@ -67,8 +67,8 @@ export function WaveformPanel() {
 
   return (
     <Panel title="Waveform" explainer={EXPLAINER}>
-      <canvas ref={canvasRef} className="viz-canvas" />
-      <div ref={statsRef} className="stats-line" />
+      <canvas ref={canvasRef} className="block h-[140px] w-full rounded-[5px] bg-canvas" />
+      <div ref={statsRef} className="mt-1.5 text-xs text-muted tabular-nums" />
     </Panel>
   );
 }

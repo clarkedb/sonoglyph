@@ -10,6 +10,8 @@ const EXPLAINER =
   'the nominals it matched, and the level difference between the two tones (“twist”). ' +
   'Confidence falls as the measured frequencies drift from nominal.';
 
+const CELL = 'border-b border-edge-soft py-1 pr-2';
+
 export function GlyphTimeline() {
   const controller = useController();
   useControllerTick();
@@ -26,27 +28,34 @@ export function GlyphTimeline() {
       }
     >
       {glyphs.length === 0 ? (
-        <p className="hint">
+        <p className="text-[12.5px] leading-normal text-faint">
           No glyphs yet — press a keypad key or hold your phone’s dialer up to the microphone.
         </p>
       ) : (
         <>
-          <div className="dialed">
+          <div className="mb-2.5 flex flex-wrap gap-1">
             {glyphs.map((g, i) => (
-              <span key={i} className="dialed-symbol">
+              <span
+                key={i}
+                className="dialed-symbol rounded-[5px] border border-accent bg-accent-dim px-2 py-[3px] text-[17px] font-bold"
+              >
                 {g.symbol}
               </span>
             ))}
           </div>
-          <table className="glyph-table">
+          <table className="glyph-table w-full border-collapse text-[12.5px] tabular-nums">
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th>Start</th>
-                <th>Duration</th>
-                <th>Confidence</th>
-                <th>Detected pair</th>
-                <th>Twist</th>
+                {['Symbol', 'Start', 'Duration', 'Confidence', 'Detected pair', 'Twist'].map(
+                  (heading) => (
+                    <th
+                      key={heading}
+                      className="border-b border-edge py-1 pr-2 text-left font-medium text-muted"
+                    >
+                      {heading}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
@@ -54,20 +63,20 @@ export function GlyphTimeline() {
                 const payload = glyph.payload as DtmfPayload | undefined;
                 return (
                   <tr key={glyphs.length - i}>
-                    <td className="glyph-symbol">{glyph.symbol}</td>
-                    <td>{glyph.start.toFixed(2)} s</td>
-                    <td>{(glyph.duration * 1000).toFixed(0)} ms</td>
-                    <td>
+                    <td className={`${CELL} text-base font-bold text-accent`}>{glyph.symbol}</td>
+                    <td className={CELL}>{glyph.start.toFixed(2)} s</td>
+                    <td className={CELL}>{(glyph.duration * 1000).toFixed(0)} ms</td>
+                    <td className={CELL}>
                       <meter min={0} max={1} value={glyph.confidence} />{' '}
                       {(glyph.confidence * 100).toFixed(0)}%
                     </td>
-                    <td>
+                    <td className={CELL}>
                       {payload
                         ? `${payload.lowHz.toFixed(1)} + ${payload.highHz.toFixed(1)} Hz ` +
                           `(nominal ${payload.nominalLowHz} + ${payload.nominalHighHz})`
                         : '—'}
                     </td>
-                    <td>{payload ? `${payload.twistDb.toFixed(1)} dB` : '—'}</td>
+                    <td className={CELL}>{payload ? `${payload.twistDb.toFixed(1)} dB` : '—'}</td>
                   </tr>
                 );
               })}

@@ -13,6 +13,8 @@ const EXPLAINER =
   'microphone is live, keypad tones are only played out loud — the mic picks them up ' +
   'acoustically, like a phone would.';
 
+const LABEL = 'flex flex-col gap-1 text-xs text-muted';
+
 export function InputPanel() {
   const controller = useController();
   useControllerTick();
@@ -48,7 +50,7 @@ export function InputPanel() {
       controls={
         <>
           <button
-            className={mode === 'mic' ? 'active' : ''}
+            className={mode === 'mic' ? 'border-accent bg-accent-dim' : ''}
             onClick={() =>
               run(() => (mode === 'mic' ? controller.stop() : controller.startMicrophone()))
             }
@@ -70,17 +72,21 @@ export function InputPanel() {
         </>
       }
     >
-      <div className="input-grid">
-        <div className="keypad">
+      <div className="grid grid-cols-[auto_1fr] gap-4.5">
+        <div className="grid grid-cols-4 content-start gap-1.5">
           {ALL_KEYS.map((key) => (
-            <button key={key} className="key" onClick={() => run(() => controller.playKey(key))}>
+            <button
+              key={key}
+              className="key h-12 w-12 text-lg font-semibold active:bg-accent-dim"
+              onClick={() => run(() => controller.playKey(key))}
+            >
               {key}
             </button>
           ))}
         </div>
-        <div className="tone-gen">
-          <h3>Tone generator</h3>
-          <label>
+        <div className="tone-gen flex flex-col items-start gap-2">
+          <h3 className="text-[13px] font-bold text-heading">Tone generator</h3>
+          <label className={LABEL}>
             Frequencies (Hz, comma-separated)
             <input
               value={toneFreqs}
@@ -88,7 +94,7 @@ export function InputPanel() {
               placeholder="697, 1209"
             />
           </label>
-          <label>
+          <label className={LABEL}>
             Duration (ms)
             <input
               type="number"
@@ -109,36 +115,36 @@ export function InputPanel() {
           >
             Play
           </button>
-          <p className="hint">
+          <p className="text-[12.5px] leading-normal text-faint">
             Try 697 + 1209 — the exact pair for key “1” — or detune one of them and watch the
             recognizer refuse it.
           </p>
         </div>
       </div>
-      <details className="phone-howto">
-        <summary>Use a real phone as the input</summary>
-        <p>
+      <details className="phone-howto mt-2.5 rounded-md border border-dashed border-edge px-2.5 py-2 text-[12.5px] text-soft">
+        <summary className="cursor-pointer text-[#9fb0c7]">Use a real phone as the input</summary>
+        <p className="mt-1.5 leading-normal">
           Start the microphone above, then open your smartphone’s Phone app and bring up its keypad
           — no call needed. Turn the media volume up and take the phone off silent, hold it near
           this device’s microphone, and tap digits: each tap plays the same two-tone pair this
           keypad synthesizes.
         </p>
-        <ul>
+        <ul className="mt-1.5 list-disc pl-[18px] leading-normal">
           <li>
-            <strong>iPhone:</strong> keypad taps play tones out of the box; if you hear nothing,
-            flip the ring/silent switch to ring.
+            <strong className="font-semibold text-[#b8c4d6]">iPhone:</strong> keypad taps play tones
+            out of the box; if you hear nothing, flip the ring/silent switch to ring.
           </li>
           <li>
-            <strong>Android:</strong> if taps are silent, enable Settings → Sound & vibration →
-            “Dial pad tones” (wording varies by vendor).
+            <strong className="font-semibold text-[#b8c4d6]">Android:</strong> if taps are silent,
+            enable Settings → Sound & vibration → “Dial pad tones” (wording varies by vendor).
           </li>
         </ul>
-        <p>
+        <p className="mt-1.5 leading-normal">
           During a live call the keypad sends real DTMF down the line — that’s the same signaling
           this recognizer decodes, in use since 1963.
         </p>
       </details>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
     </Panel>
   );
 }

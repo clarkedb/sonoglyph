@@ -32,5 +32,6 @@ one directory per skill containing a `SKILL.md` with `name` and
   the source of truth. One skill, one directory, symlinked everywhere a
   tool needs it.
 
-Existing skills: `create-pr` (verification + PR conventions) and `verify`
-(build/launch/drive recipe for the playground).
+Existing skills: `create-pr` (verification + PR conventions), `verify`
+(build/launch/drive recipe for the playground), and `review-pr`
+(multi-agent PR review with a verifying judge pass).

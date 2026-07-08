@@ -14,7 +14,7 @@ import { DEFAULT_ENGINE_OPTIONS, Pipeline, tones, TsDspEngine } from '@sonoglyph
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor } from '@sonoglyph/plugin-dtmf';
 
-export type InputMode = 'idle' | 'mic' | 'buffer';
+export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
 
 export interface PlaygroundStatus {
   mode: InputMode;
@@ -36,7 +36,7 @@ const HISTORY_SEC = 2;
  */
 export class PlaygroundController {
   private engineOptions: DspEngineOptions = { ...DEFAULT_ENGINE_OPTIONS };
-  private pipeline: Pipeline;
+  private pipeline: Pipeline | null = null;
   private readonly recognizer = new DtmfRecognizer();
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
@@ -83,6 +83,11 @@ export class PlaygroundController {
   private buildPipeline(): Pipeline {
     this.frameUnsub?.();
     this.glyphUnsub?.();
+    // Detach the old pipeline from the long-lived recognizer (it would
+    // otherwise keep a dead listener alive) and clear press state — a new
+    // engine means a new time base.
+    this.pipeline?.dispose();
+    this.recognizer.reset();
     const pipeline = new Pipeline(new TsDspEngine(this.engineOptions));
     pipeline.addPlugin(this.recognizer);
     this.frameUnsub = pipeline.onFrame((frame) => {
@@ -106,7 +111,7 @@ export class PlaygroundController {
 
   private handleSamples = (samples: Float32Array): void => {
     this.sampleHistory.write(samples);
-    this.pipeline.push(samples);
+    this.pipeline?.push(samples);
     this.status.samplesReceived += samples.length;
     this.status.chunksReceived += 1;
   };
@@ -123,7 +128,6 @@ export class PlaygroundController {
       // Keep frame pacing constant relative to the window: 75% overlap.
       hopSize: Math.max(128, windowSize / 4),
     };
-    this.recognizer.reset();
     this.pipeline = this.buildPipeline();
     this.notify();
   }
@@ -136,10 +140,25 @@ export class PlaygroundController {
   }
 
   async startMicrophone(): Promise<void> {
+    // Reject re-entry: a second click while getUserMedia's permission
+    // prompt is pending would otherwise orphan the first (still-starting)
+    // microphone with no reference left to stop it.
+    if (this.status.mode === 'starting' || this.status.mode === 'mic') return;
     await this.stop();
-    this.mic = new MicrophoneSource();
-    await this.mic.start(this.handleSamples);
-    this.setSampleRate(this.mic.sampleRate);
+    this.status.mode = 'starting';
+    this.notify();
+    const mic = new MicrophoneSource();
+    this.mic = mic;
+    try {
+      await mic.start(this.handleSamples);
+    } catch (err) {
+      await mic.stop();
+      this.mic = null;
+      this.status.mode = 'idle';
+      this.notify();
+      throw err;
+    }
+    this.setSampleRate(mic.sampleRate);
     this.status.mode = 'mic';
     this.notify();
   }
@@ -162,7 +181,10 @@ export class PlaygroundController {
    */
   async playBuffer(samples: Float32Array, sampleRate: number): Promise<void> {
     this.playAudible(samples, sampleRate);
-    if (this.status.mode === 'mic') return;
+    // Skip the direct feed while the mic is live (acoustic pickup is the
+    // honest path) or still starting (feeding now would leave this buffer
+    // streaming into the mic's pipeline once the start resolves).
+    if (this.status.mode === 'mic' || this.status.mode === 'starting') return;
 
     await this.bufferSource?.stop();
     this.setSampleRate(sampleRate);

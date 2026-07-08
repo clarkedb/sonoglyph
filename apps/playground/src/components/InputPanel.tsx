@@ -51,11 +51,16 @@ export function InputPanel() {
         <>
           <button
             className={mode === 'mic' ? 'border-accent bg-accent-dim' : ''}
+            disabled={mode === 'starting'}
             onClick={() =>
               run(() => (mode === 'mic' ? controller.stop() : controller.startMicrophone()))
             }
           >
-            {mode === 'mic' ? '● Stop microphone' : 'Microphone'}
+            {mode === 'mic'
+              ? '● Stop microphone'
+              : mode === 'starting'
+                ? 'Starting…'
+                : 'Microphone'}
           </button>
           <button onClick={() => fileRef.current?.click()}>WAV file…</button>
           <input

@@ -14,6 +14,7 @@ export class MicrophoneSource implements AudioSource {
   private context: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private node: AudioWorkletNode | null = null;
+  private starting = false;
   private _sampleRate = 0;
 
   get sampleRate(): number {
@@ -21,27 +22,37 @@ export class MicrophoneSource implements AudioSource {
   }
 
   async start(onSamples: (samples: Float32Array) => void): Promise<void> {
-    if (this.context) throw new Error('MicrophoneSource is already started');
+    if (this.starting || this.context) throw new Error('MicrophoneSource is already started');
+    this.starting = true;
 
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-      },
-    });
-    this.context = new AudioContext();
-    this._sampleRate = this.context.sampleRate;
-    await ensureCaptureWorklet(this.context);
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+        },
+      });
+      this.context = new AudioContext();
+      this._sampleRate = this.context.sampleRate;
+      await ensureCaptureWorklet(this.context);
 
-    const mic = this.context.createMediaStreamSource(this.stream);
-    this.node = new AudioWorkletNode(this.context, CAPTURE_PROCESSOR_NAME, {
-      numberOfOutputs: 0,
-    });
-    this.node.port.onmessage = (event: MessageEvent<Float32Array>) => {
-      onSamples(event.data);
-    };
-    mic.connect(this.node);
+      const mic = this.context.createMediaStreamSource(this.stream);
+      this.node = new AudioWorkletNode(this.context, CAPTURE_PROCESSOR_NAME, {
+        numberOfOutputs: 0,
+      });
+      this.node.port.onmessage = (event: MessageEvent<Float32Array>) => {
+        onSamples(event.data);
+      };
+      mic.connect(this.node);
+    } catch (err) {
+      // A failure after getUserMedia would otherwise leave the hardware
+      // capturing (mic indicator lit) with no handle to release it.
+      await this.stop();
+      throw err;
+    } finally {
+      this.starting = false;
+    }
   }
 
   async stop(): Promise<void> {

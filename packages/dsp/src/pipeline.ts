@@ -22,6 +22,7 @@ export class Pipeline {
   constructor(readonly engine: DspEngine) {}
 
   addPlugin(plugin: RecognizerPlugin): void {
+    if (this.pluginUnsubs.has(plugin)) return;
     this.plugins.push(plugin);
     this.pluginUnsubs.set(
       plugin,
@@ -69,5 +70,14 @@ export class Pipeline {
   reset(): void {
     this.engine.reset();
     for (const plugin of this.plugins) plugin.reset();
+  }
+
+  /** Detach every plugin and subscriber. A disposed pipeline holds no
+   * references into long-lived plugins, so it can be dropped for a rebuilt
+   * one without leaking listeners. */
+  dispose(): void {
+    for (const plugin of [...this.plugins]) this.removePlugin(plugin);
+    this.glyphSubs.clear();
+    this.frameSubs.clear();
   }
 }

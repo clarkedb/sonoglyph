@@ -1,0 +1,17 @@
+{
+  "name": "@sonoglyph/dsp",
+  "version": "0.1.0",
+  "description": "Sonoglyph reference DSP engine: windowing, FFT, spectrum, peaks, envelope",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sonoglyph/core": "workspace:*"
+  }
+}

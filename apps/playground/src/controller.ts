@@ -27,7 +27,11 @@ const EMPTY_TRANSCRIPT: MorseTranscript = { text: '', letters: [] };
 
 export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
 
-/** Which DTMF recognizer(s) feed the glyph timeline. */
+/** Which signal system the playground is exploring. The input, the active
+ * recognizer(s), and the output panels all follow this one choice. */
+export type SignalSystem = 'dtmf' | 'morse';
+
+/** Within DTMF, which recognizer(s) feed the glyph timeline. */
 export type DecoderChoice = 'fft' | 'goertzel' | 'both';
 
 export interface PlaygroundStatus {
@@ -35,8 +39,8 @@ export interface PlaygroundStatus {
   sampleRate: number;
   windowSize: number;
   window: WindowName;
+  system: SignalSystem;
   decoders: DecoderChoice;
-  morseEnabled: boolean;
   samplesReceived: number;
   chunksReceived: number;
 }
@@ -57,8 +61,8 @@ export class PlaygroundController {
   private readonly goertzelRecognizer = new GoertzelDtmfRecognizer();
   private readonly morseRecognizer = new MorseRecognizer();
   private readonly morseTranslator = new MorseTextTranslator();
+  private system: SignalSystem = 'dtmf';
   private decoders: DecoderChoice = 'fft';
-  private morseEnabled = false;
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
 
@@ -83,8 +87,8 @@ export class PlaygroundController {
     sampleRate: DEFAULT_ENGINE_OPTIONS.sampleRate,
     windowSize: DEFAULT_ENGINE_OPTIONS.windowSize,
     window: DEFAULT_ENGINE_OPTIONS.window,
+    system: 'dtmf',
     decoders: 'fft',
-    morseEnabled: false,
     samplesReceived: 0,
     chunksReceived: 0,
   };
@@ -112,15 +116,14 @@ export class PlaygroundController {
     for (const cb of this.listeners) cb();
   }
 
-  /** The recognizers the current choices put on the pipeline. */
+  /** The recognizers the current signal system puts on the pipeline. */
   private activeRecognizers(): (DtmfRecognizer | GoertzelDtmfRecognizer | MorseRecognizer)[] {
-    const dtmf =
-      this.decoders === 'fft'
-        ? [this.fftRecognizer]
-        : this.decoders === 'goertzel'
-          ? [this.goertzelRecognizer]
-          : [this.fftRecognizer, this.goertzelRecognizer];
-    return this.morseEnabled ? [...dtmf, this.morseRecognizer] : dtmf;
+    if (this.system === 'morse') return [this.morseRecognizer];
+    return this.decoders === 'fft'
+      ? [this.fftRecognizer]
+      : this.decoders === 'goertzel'
+        ? [this.goertzelRecognizer]
+        : [this.fftRecognizer, this.goertzelRecognizer];
   }
 
   private buildPipeline(): Pipeline {
@@ -171,8 +174,24 @@ export class PlaygroundController {
     this.status.sampleRate = this.engineOptions.sampleRate;
     this.status.windowSize = this.engineOptions.windowSize;
     this.status.window = this.engineOptions.window;
+    this.status.system = this.system;
     this.status.decoders = this.decoders;
     return pipeline;
+  }
+
+  /**
+   * Switch the signal system being explored. This swaps the active
+   * recognizer(s) — and the UI swaps the input and output panels to match.
+   * It's a fresh start: DTMF digits and Morse dots share one timeline, so
+   * mixing them would be noise; clear the glyph history and transcript.
+   */
+  setSystem(system: SignalSystem): void {
+    if (system === this.system) return;
+    this.system = system;
+    this.glyphs = [];
+    this.morseTranslator.reset();
+    this.pipeline = this.buildPipeline();
+    this.notify();
   }
 
   /**
@@ -183,15 +202,6 @@ export class PlaygroundController {
   setDecoders(choice: DecoderChoice): void {
     if (choice === this.decoders) return;
     this.decoders = choice;
-    this.pipeline = this.buildPipeline();
-    this.notify();
-  }
-
-  /** Put the Morse recognizer on (or off) the pipeline. */
-  setMorseEnabled(enabled: boolean): void {
-    if (enabled === this.morseEnabled) return;
-    this.morseEnabled = enabled;
-    this.status.morseEnabled = enabled;
     this.pipeline = this.buildPipeline();
     this.notify();
   }

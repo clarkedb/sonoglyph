@@ -10,5 +10,5 @@ export {
   ENVELOPE_VERSION,
   SAMPLES_VERSION,
 } from './engine.ts';
-export { Pipeline } from './pipeline.ts';
+export { Pipeline, type PipelineError } from './pipeline.ts';
 export { tones, sine, silence, whiteNoise, concat, mix, type ToneSpec } from './generate.ts';

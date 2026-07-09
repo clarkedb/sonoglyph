@@ -251,6 +251,10 @@ import { Pipeline, TsDspEngine } from '@sonoglyph/dsp';
 const pipeline = new Pipeline(new TsDspEngine({ sampleRate: 48_000 }));
 pipeline.addPlugin(createChirpRecognizer());
 pipeline.onGlyph((glyph) => console.log(glyph.symbol, glyph));
+// A bug in your classify/finalize throws, not silently misbehaves — the
+// pipeline catches it per frame and reports it here instead of one plugin
+// taking down every other plugin sharing the pipeline.
+pipeline.onError(({ plugin, frame, error }) => console.error(plugin.metadata.id, frame, error));
 // …then push samples from any AudioSource (mic, WAV, generator).
 ```
 

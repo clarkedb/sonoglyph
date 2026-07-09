@@ -14,6 +14,7 @@ import {
   concat,
   DEFAULT_ENGINE_OPTIONS,
   Pipeline,
+  type PipelineError,
   silence,
   tones,
   TsDspEngine,
@@ -74,6 +75,7 @@ export class PlaygroundController {
   private decoders: DecoderChoice = 'fft';
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
+  private errorUnsub: Unsubscribe | null = null;
 
   private mic: MicrophoneSource | null = null;
   private bufferSource: BufferSource | null = null;
@@ -104,6 +106,10 @@ export class PlaygroundController {
     envelope?: FeatureFrame<EnvelopeData>;
   } = {};
   glyphs: Glyph[] = [];
+  /** Plugin errors caught by the pipeline — a throwing recognizer is
+   * skipped for that frame, not fatal, so these just accumulate for
+   * inspection rather than halting anything. */
+  errors: PipelineError[] = [];
   /** The Morse translator's running decode (the Meaning layer): assembled
    * text plus the letters behind it, each with the code it came from. */
   morseTranscript: MorseTranscript = EMPTY_TRANSCRIPT;
@@ -154,6 +160,7 @@ export class PlaygroundController {
   private buildPipeline(): Pipeline {
     this.frameUnsub?.();
     this.glyphUnsub?.();
+    this.errorUnsub?.();
     // Detach the old pipeline from the long-lived recognizers (it would
     // otherwise keep dead listeners alive) and clear press state — a new
     // engine means a new time base.
@@ -197,6 +204,13 @@ export class PlaygroundController {
       this.morseTranslator.push(glyph);
       const units = (glyph.payload as MorseElementPayload | undefined)?.units;
       if (glyph.pluginId === 'morse' && units) this.morseUnitSec = glyph.duration / units;
+      this.notify();
+    });
+    // A throwing recognizer is caught and skipped by the pipeline, not
+    // fatal — surface it the same way as glyphs, for whichever panel wants
+    // to show it.
+    this.errorUnsub = pipeline.onError((err) => {
+      this.errors = [...this.errors, err];
       this.notify();
     });
     // A new engine restarts the clock and the signal.

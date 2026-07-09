@@ -35,6 +35,7 @@ pnpm test            # unit + integration tests (all signals synthesized in code
 ## Documentation
 
 - **[Architecture](docs/architecture.md)** — the pipeline, the glyph and feature-stream abstractions, the plugin contract, layering rules, and the TypeScript-now / Rust-WASM-later DSP engine strategy.
+- **[Plugin authoring](docs/plugins.md)** — build a recognizer from scratch against `core` + `plugin-sdk`, test it under realistic noise in a few lines, and run it live — without reading framework internals.
 - **[Roadmap](docs/roadmap.md)** — the phased implementation plan, testing strategy, CI/CD plan, and the concrete triggers for the Rust/WASM switch.
 
 ## License

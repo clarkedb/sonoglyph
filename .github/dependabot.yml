@@ -8,10 +8,8 @@ updates:
       interval: weekly
     commit-message:
       prefix: 'chore'
-    # Let updates sit before opening a PR, same rationale as the npm cooldown below.
     cooldown:
-      default-days: 1
-      semver-major-days: 2
+      default-days: 2
 
   - package-ecosystem: npm
     directory: /

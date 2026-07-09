@@ -90,11 +90,20 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-sdk:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../core
+
   plugins/dtmf:
     dependencies:
       '@sonoglyph/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@sonoglyph/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
     devDependencies:
       '@sonoglyph/dsp':
         specifier: workspace:*

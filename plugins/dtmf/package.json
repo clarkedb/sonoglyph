@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sonoglyph/core": "workspace:*"
+    "@sonoglyph/core": "workspace:*",
+    "@sonoglyph/plugin-sdk": "workspace:*"
   },
   "devDependencies": {
     "@sonoglyph/dsp": "workspace:*"

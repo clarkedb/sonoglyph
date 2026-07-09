@@ -1,0 +1,32 @@
+# PR titles become squash-merge commit subjects, and automated versioning
+# (Changesets releases) trusts their conventional-commit prefix. The PR
+# template asks for the convention; this check is the backstop.
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+permissions: {}
+
+jobs:
+  lint-title:
+    name: Conventional-commit prefix
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate title
+        env:
+          # Via env, never interpolated into the script: PR titles are
+          # attacker-controlled input.
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|chore|docs|refactor|test|ci|perf|build|style|revert)(\([a-z0-9./-]+\))?!?: .+'
+          if printf '%s' "$TITLE" | grep -qE "$pattern"; then
+            echo "PR title OK: $TITLE"
+          else
+            echo "::error::PR title must start with a conventional-commit prefix" \
+              "(feat:, fix:, chore:, docs:, refactor:, test:, ci:, perf:, ...)," \
+              "optionally scoped like 'feat(dsp): ...'. Got: '$TITLE'"
+            exit 1
+          fi

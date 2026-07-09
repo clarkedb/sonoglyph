@@ -144,12 +144,12 @@ export function createChirpRecognizer(options: Partial<ChirpOptions> = {}): Reco
       };
     },
 
-    // Optional: turn the finished press into the emitted glyph. This is
+    // Optional: turn the finished run into the emitted glyph. This is
     // where per-frame payloads aggregate into one story.
-    finalize: (press) => ({
+    finalize: (run) => ({
       payload: {
         meanHz:
-          press.matches.reduce((sum, m) => sum + m.payload!.frequencyHz, 0) / press.matches.length,
+          run.matches.reduce((sum, m) => sum + m.payload!.frequencyHz, 0) / run.matches.length,
       },
     }),
   });
@@ -164,7 +164,7 @@ machine extracted from the DTMF reference plugin. Concretely:
 - **Minimum duration.** A symbol must persist `minDurationMs` before a
   glyph is ever emitted — single noisy frames can't fire your plugin.
 - **Gap debouncing.** Silence (or a _different_ symbol) must last
-  `minGapMs` to end a press. A one-frame dropout, or noise flipping one
+  `minGapMs` to end a run. A one-frame dropout, or noise flipping one
   frame to a neighboring symbol, is absorbed — and credited to the
   duration, since the signal was evidently sounding through it.
 - **Span-corrected durations.** A tone appears in every analysis window
@@ -173,10 +173,11 @@ machine extracted from the DTMF reference plugin. Concretely:
   correction — before checking `minDurationMs` and reporting
   `glyph.duration`, which therefore lands within about half a window of
   the true duration.
-- **Emission on release.** The glyph is emitted when the press _ends_,
-  so its duration covers the whole press.
+- **Emission on release.** The glyph is emitted when the run of
+  matching frames _ends_, so its duration covers the whole run — for a
+  keyed signal, that means on release, not on press.
 - **`finalize` superpowers.** Override the symbol (Morse decides dot
-  vs. dash by duration here), override the confidence, veto the press by
+  vs. dash by duration here), override the confidence, veto the run by
   returning `null`, or aggregate per-frame payloads.
 
 If your recognition isn't a per-frame classification — you need custom
@@ -276,7 +277,7 @@ Three shipped plugins mark the escalation path — read them in order:
 3. **`plugins/morse` — `MorseRecognizer`** (multiple glyph kinds).
    Implements `RecognizerPlugin` directly and _composes_ an inner
    `defineRecognizer` machine for dot/dash elements, then aggregates
-   letters on top with its own gap logic. When one press-machine isn't
+   letters on top with its own gap logic. When one run-machine isn't
    the whole story, wrap it instead of fighting it.
 
 ## The Meaning layer

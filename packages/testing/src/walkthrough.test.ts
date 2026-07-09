@@ -61,12 +61,12 @@ function createChirpRecognizer(options: Partial<ChirpOptions> = {}): RecognizerP
       };
     },
 
-    // Optional: turn the finished press into the emitted glyph. This is
+    // Optional: turn the finished run into the emitted glyph. This is
     // where per-frame payloads aggregate into one story.
-    finalize: (press) => ({
+    finalize: (run) => ({
       payload: {
         meanHz:
-          press.matches.reduce((sum, m) => sum + m.payload!.frequencyHz, 0) / press.matches.length,
+          run.matches.reduce((sum, m) => sum + m.payload!.frequencyHz, 0) / run.matches.length,
       },
     }),
   });

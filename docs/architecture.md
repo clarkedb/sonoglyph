@@ -83,6 +83,8 @@ interface RecognizerPlugin {
 
 Plugins own their segmentation state and emit glyphs asynchronously, whenever they have enough evidence. The plugin SDK will provide helpers so that "dumb" plugins (pure per-frame classifiers) can be written as a single function and get debouncing for free.
 
+A plugin's `process` is expected to throw only on its own bugs, never as control flow. When it does, the `Pipeline` catches it per plugin per frame, reports it through `onError`, and keeps delivering that frame to every other plugin — one broken recognizer must not stop the rest of the batch, since Phase 2's plugins are written by strangers sharing a live pipeline.
+
 ## Layers and packages
 
 ```

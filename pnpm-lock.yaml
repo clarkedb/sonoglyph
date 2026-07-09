@@ -50,6 +50,9 @@ importers:
       '@sonoglyph/plugin-dtmf':
         specifier: workspace:*
         version: link:../../plugins/dtmf
+      '@sonoglyph/plugin-morse':
+        specifier: workspace:*
+        version: link:../../plugins/morse
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -121,6 +124,22 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plugin-sdk
     devDependencies:
+      '@sonoglyph/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
+  plugins/morse:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@sonoglyph/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+    devDependencies:
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../../packages/dsp
       '@sonoglyph/testing':
         specifier: workspace:*
         version: link:../../packages/testing

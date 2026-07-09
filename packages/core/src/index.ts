@@ -184,6 +184,28 @@ export interface RecognizerPlugin {
 }
 
 // ---------------------------------------------------------------------------
+// Translators (the Meaning layer)
+// ---------------------------------------------------------------------------
+
+/**
+ * Glyph sequences in, meaning out. Where a recognizer answers "what
+ * symbol just sounded?", a translator answers "what does the sequence
+ * say?" — a dialed number, decoded Morse text, a parsed sentence. Wire
+ * one to a pipeline with `pipeline.onGlyph((g) => translator.push(g))`;
+ * it decides which plugins' glyphs it understands.
+ */
+export interface Translator<M = unknown> {
+  /** Stable unique id, e.g. "morse-text". */
+  readonly id: string;
+  /** Consume one glyph. Emits meaning whenever enough has accumulated. */
+  push(glyph: Glyph): void;
+  /** Subscribe to emitted meaning. */
+  onMeaning(cb: (meaning: M) => void): Unsubscribe;
+  /** Clear internal state (e.g. when the audio source changes). */
+  reset(): void;
+}
+
+// ---------------------------------------------------------------------------
 // Audio sources
 // ---------------------------------------------------------------------------
 

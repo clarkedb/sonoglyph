@@ -1,10 +1,11 @@
 import type { Glyph } from '@sonoglyph/core';
 import type { DtmfPayload, GoertzelDtmfPayload } from '@sonoglyph/plugin-dtmf';
+import type { MorseElementPayload } from '@sonoglyph/plugin-morse';
 import type { DecoderChoice } from '../controller.js';
 import { useController, useControllerTick } from '../hooks.js';
 import { Panel } from './Panel.js';
 
-const EXPLAINER =
+const DTMF_EXPLAINER =
   'Glyphs are the output of recognition: a symbol with a time span, a confidence, and ' +
   'plugin-defined detail. A recognizer emits one when a tone pair persisted long enough ' +
   '(≥40 ms) and then ended — which is why the glyph appears as you release, not as you ' +
@@ -16,20 +17,35 @@ const EXPLAINER =
   'real-world DTMF design). Run both and bury a tone in noise: the purpose-built ' +
   'measurement keeps decoding after peak-picking gives out.';
 
+const MORSE_EXPLAINER =
+  'Glyphs are the output of recognition: a symbol with a time span, a confidence, and ' +
+  'plugin-defined detail. Here each glyph is one keyed element — a dot or a dash, named by ' +
+  'its duration (a dash is 3 dots long) and emitted when the key-down ends. That is all the ' +
+  'recognizer produces; the elements assemble into letters and words one stage later, in the ' +
+  'meaning panel. Note the same waveform/spectrum/features pipeline above fed the DTMF ' +
+  'decoder moments ago — nothing in it knows a signal changed.';
+
 /** Short decoder names for the comparison view. */
 const DECODER_LABELS: Record<string, string> = {
   dtmf: 'FFT',
   'dtmf-goertzel': 'Goertzel',
+  morse: 'Morse',
 };
 
 const decoderLabel = (pluginId: string) => DECODER_LABELS[pluginId] ?? pluginId;
 
 const CELL = 'border-b border-edge-soft py-1 pr-2';
 
-/** The payload cells, for whichever DTMF payload shape the glyph carries. */
+/** The payload cells, for whichever payload shape the glyph carries. */
 function payloadText(glyph: Glyph): { pair: string; detail: string } {
-  const payload = glyph.payload as Partial<DtmfPayload & GoertzelDtmfPayload> | undefined;
+  const payload = glyph.payload as
+    Partial<DtmfPayload & GoertzelDtmfPayload & MorseElementPayload> | undefined;
   if (!payload) return { pair: '—', detail: '—' };
+  // Morse elements: a dot or dash, measured in timing units. (Letters and
+  // words are meaning, not glyphs — see the Morse panel.)
+  if (payload.units !== undefined) {
+    return { pair: '—', detail: `${payload.units.toFixed(1)} units long` };
+  }
   const detail = payload.twistDb !== undefined ? `${payload.twistDb.toFixed(1)} dB twist` : '—';
   if (payload.lowHz !== undefined && payload.highHz !== undefined) {
     return {
@@ -39,42 +55,54 @@ function payloadText(glyph: Glyph): { pair: string; detail: string } {
       detail,
     };
   }
-  return {
-    pair: `nominal ${payload.nominalLowHz} + ${payload.nominalHighHz} Hz`,
-    detail: payload.snrDb !== undefined ? `${detail} · ${payload.snrDb.toFixed(0)} dB SNR` : detail,
-  };
+  if (payload.nominalLowHz !== undefined) {
+    return {
+      pair: `nominal ${payload.nominalLowHz} + ${payload.nominalHighHz} Hz`,
+      detail:
+        payload.snrDb !== undefined ? `${detail} · ${payload.snrDb.toFixed(0)} dB SNR` : detail,
+    };
+  }
+  return { pair: '—', detail };
 }
 
 export function GlyphTimeline() {
   const controller = useController();
   useControllerTick();
   const glyphs = controller.glyphs;
-  const decoders = controller.status.decoders;
-  const comparing = decoders === 'both';
-  // Chip rows: one per active decoder, so "did they agree?" is one glance.
+  const { decoders, system } = controller.status;
+  // DTMF glyphs carry a frequency pair; Morse elements don't, so that
+  // column (and the decoder comparison) only belong in DTMF mode.
+  const showPair = system === 'dtmf';
+  // Attribution follows the glyphs actually collected, not the current
+  // toggle state: history survives plugin switches, and a glyph from a
+  // since-disabled plugin must stay labeled, never masquerade as another
+  // decoder's output.
+  const idsInGlyphs = [...new Set(glyphs.map((g) => g.pluginId))];
+  const comparing = idsInGlyphs.length > 1;
+  // Chip rows: one per emitting plugin, so "did they agree?" is one glance.
   const chipRows = comparing
-    ? ['dtmf', 'dtmf-goertzel'].map(
-        (id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const,
-      )
+    ? idsInGlyphs.map((id) => [decoderLabel(id), glyphs.filter((g) => g.pluginId === id)] as const)
     : [['', glyphs] as const];
 
   return (
     <Panel
       title="Glyph timeline"
-      explainer={EXPLAINER}
+      explainer={showPair ? DTMF_EXPLAINER : MORSE_EXPLAINER}
       controls={
         <>
-          <label className="flex items-center gap-1.5 text-xs text-muted">
-            Decoder
-            <select
-              value={decoders}
-              onChange={(event) => controller.setDecoders(event.target.value as DecoderChoice)}
-            >
-              <option value="fft">DTMF (FFT peaks)</option>
-              <option value="goertzel">DTMF (Goertzel)</option>
-              <option value="both">Compare both</option>
-            </select>
-          </label>
+          {showPair && (
+            <label className="flex items-center gap-1.5 text-xs text-muted">
+              Decoder
+              <select
+                value={decoders}
+                onChange={(event) => controller.setDecoders(event.target.value as DecoderChoice)}
+              >
+                <option value="fft">DTMF (FFT peaks)</option>
+                <option value="goertzel">DTMF (Goertzel)</option>
+                <option value="both">Compare both</option>
+              </select>
+            </label>
+          )}
           <button onClick={() => controller.clearGlyphs()} disabled={glyphs.length === 0}>
             Clear
           </button>
@@ -83,7 +111,9 @@ export function GlyphTimeline() {
     >
       {glyphs.length === 0 ? (
         <p className="text-[12.5px] leading-normal text-faint">
-          No glyphs yet — press a keypad key or hold your phone’s dialer up to the microphone.
+          {showPair
+            ? 'No glyphs yet — press a keypad key or hold your phone’s dialer up to the microphone.'
+            : 'No glyphs yet — key a message in the input panel, or feed Morse from the microphone.'}
         </p>
       ) : (
         <>
@@ -102,9 +132,6 @@ export function GlyphTimeline() {
                   {g.symbol}
                 </span>
               ))}
-              {label && rowGlyphs.length === 0 && (
-                <span className="text-[12.5px] text-faint">no glyphs</span>
-              )}
             </div>
           ))}
           <table className="glyph-table w-full border-collapse text-[12.5px] tabular-nums">
@@ -116,7 +143,7 @@ export function GlyphTimeline() {
                   'Start',
                   'Duration',
                   'Confidence',
-                  'Detected pair',
+                  ...(showPair ? ['Detected pair'] : []),
                   'Detail',
                 ].map((heading) => (
                   <th
@@ -141,7 +168,7 @@ export function GlyphTimeline() {
                       <meter min={0} max={1} value={glyph.confidence} />{' '}
                       {(glyph.confidence * 100).toFixed(0)}%
                     </td>
-                    <td className={CELL}>{pair}</td>
+                    {showPair && <td className={CELL}>{pair}</td>}
                     <td className={CELL}>{detail}</td>
                   </tr>
                 );

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { ALL_KEYS } from '@sonoglyph/plugin-dtmf';
+import { textToMorse } from '@sonoglyph/plugin-morse';
+import type { PlaygroundController } from '../controller.js';
 import { useController, useControllerTick } from '../hooks.js';
 import { Panel } from './Panel.js';
 
-const EXPLAINER =
+const DTMF_EXPLAINER =
   'Everything starts as samples: numbers measuring air pressure thousands of times per ' +
   'second. The pipeline does not care where they come from — a microphone, a synthesized ' +
   'keypad tone, or an uploaded WAV file all flow through the exact same code. Press a keypad ' +
@@ -13,40 +15,37 @@ const EXPLAINER =
   'microphone is live, keypad tones are only played out loud — the mic picks them up ' +
   'acoustically, like a phone would.';
 
+const MORSE_EXPLAINER =
+  'Everything starts as samples: numbers measuring air pressure thousands of times per ' +
+  'second — from a microphone, an uploaded WAV, or the keyer below. Type a message and key ' +
+  'it: it is sent as on/off tones (dot = 1 unit, dash = 3, with 1/3/7-unit gaps) through the ' +
+  'exact same pipeline the other panels show. The recognizer reads only the amplitude ' +
+  'envelope — never the spectrum — so the pitch is irrelevant; the dots and dashes appear in ' +
+  'the glyph timeline and assemble into text in the meaning panel.';
+
 const LABEL = 'flex flex-col gap-1 text-xs text-muted';
+
+/** Run an async action, surfacing any failure through `setError`. */
+type Run = (action: () => Promise<void>) => void;
+function makeRun(setError: (e: string | null) => void): Run {
+  return (action) => {
+    setError(null);
+    action().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+  };
+}
 
 export function InputPanel() {
   const controller = useController();
   useControllerTick();
   const [error, setError] = useState<string | null>(null);
-  const [toneFreqs, setToneFreqs] = useState('440');
-  const [toneMs, setToneMs] = useState(500);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const { mode } = controller.status;
-
-  const run = (action: () => Promise<void>) => {
-    setError(null);
-    action().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
-  };
-
-  // Physical keyboard presses the on-screen keypad.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.target instanceof HTMLInputElement) return;
-      const key = event.key.toUpperCase();
-      if ((ALL_KEYS as string[]).includes(key)) {
-        run(() => controller.playKey(key as DtmfKey));
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [controller]);
+  const run = makeRun(setError);
+  const { mode, system } = controller.status;
 
   return (
     <Panel
       title="Input"
-      explainer={EXPLAINER}
+      explainer={system === 'dtmf' ? DTMF_EXPLAINER : MORSE_EXPLAINER}
       controls={
         <>
           <button
@@ -77,6 +76,38 @@ export function InputPanel() {
         </>
       }
     >
+      {system === 'dtmf' ? (
+        <DtmfInput controller={controller} run={run} />
+      ) : (
+        <MorseInput controller={controller} run={run} />
+      )}
+      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+    </Panel>
+  );
+}
+
+function DtmfInput({ controller, run }: { controller: PlaygroundController; run: Run }) {
+  const [toneFreqs, setToneFreqs] = useState('440');
+  const [toneMs, setToneMs] = useState(500);
+
+  // Physical keyboard drives the keypad — mounted only while DTMF is shown.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.target instanceof HTMLInputElement) return;
+      const key = event.key.toUpperCase();
+      if ((ALL_KEYS as string[]).includes(key)) {
+        run(() => controller.playKey(key as DtmfKey));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // `run` is recreated each render but only closes over setError (stable);
+    // keying off controller alone keeps the listener from thrashing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controller]);
+
+  return (
+    <>
       <div className="grid grid-cols-[auto_1fr] gap-4.5">
         <div className="grid grid-cols-4 content-start gap-1.5">
           {ALL_KEYS.map((key) => (
@@ -149,7 +180,83 @@ export function InputPanel() {
           this recognizer decodes, in use since 1963.
         </p>
       </details>
-      {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
-    </Panel>
+    </>
+  );
+}
+
+function MorseInput({ controller, run }: { controller: PlaygroundController; run: Run }) {
+  const [text, setText] = useState('SOS');
+  const code = textToMorse(text);
+  const keying = controller.status.mode === 'key';
+
+  // While the straight key is on, the spacebar IS the key: hold to sound a
+  // tone, release to stop. preventDefault stops the page scrolling and the
+  // focused button re-triggering; repeats are ignored so one hold is one
+  // element of the held length.
+  useEffect(() => {
+    if (!keying) return;
+    const down = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat) return;
+      event.preventDefault();
+      controller.keyDown();
+    };
+    const up = (event: KeyboardEvent) => {
+      if (event.code !== 'Space') return;
+      event.preventDefault();
+      controller.keyUp();
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, [controller, keying]);
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-end gap-2">
+        <label className={`${LABEL} grow`}>
+          Message to key
+          <input
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="SOS"
+            disabled={keying}
+          />
+        </label>
+        <button onClick={() => run(() => controller.playMorse(text))} disabled={!code || keying}>
+          Key it
+        </button>
+      </div>
+      <p aria-live="polite" className="font-mono text-[12.5px] tracking-widest text-faint">
+        {code || 'Nothing encodable yet — letters, digits, and .,?/= work.'}
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          className={keying ? 'border-accent bg-accent-dim' : ''}
+          onClick={(event) => {
+            // Drop focus so the spacebar keys the tone instead of
+            // re-clicking this button.
+            event.currentTarget.blur();
+            run(() => (keying ? controller.stop() : controller.startStraightKey()));
+          }}
+        >
+          {keying ? '● Stop straight key' : 'Straight key'}
+        </button>
+        {keying && (
+          <span className="text-[12.5px] text-faint">
+            Hold <kbd className="rounded border border-edge px-1 font-mono text-[11px]">Space</kbd>{' '}
+            to sound a tone — short tap = dot, long hold = dash.
+          </span>
+        )}
+      </div>
+
+      <p className="text-[12.5px] leading-normal text-faint">
+        Dot = 1 unit, dash = 3; letters split on a 3-unit gap, words on 7. The recognizer tracks the
+        sender’s speed, so brisk or slow both decode.
+      </p>
+    </div>
   );
 }

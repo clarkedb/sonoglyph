@@ -274,11 +274,16 @@ Three shipped plugins mark the escalation path — read them in order:
    FFT. Its classifier is _stateful_ — a closure tracking per-frequency
    noise floors across frames — which is fine: `classify` is called
    once per frame in stream order. If you need state, close over it.
-3. **`plugins/morse` — `MorseRecognizer`** (multiple glyph kinds).
-   Implements `RecognizerPlugin` directly and _composes_ an inner
-   `defineRecognizer` machine for dot/dash elements, then aggregates
-   letters on top with its own gap logic. When one run-machine isn't
-   the whole story, wrap it instead of fighting it.
+3. **`plugins/morse` — `MorseRecognizer`** (compose the machine; leave
+   assembly to Meaning). It implements `RecognizerPlugin` directly and
+   _composes_ an inner `defineRecognizer` for the dot/dash elements,
+   wrapping it only to add speed adaptation. It emits nothing but those
+   elements: a dot is a recognized signal, but the letter "S" is three
+   dots _interpreted_, so letters and words are meaning, not glyphs (see
+   the next section). Two lessons in one plugin — wrap the machine when
+   you need state around it, and when your signal has structure above the
+   primitive symbol, hand it to a translator rather than piling it into
+   the recognizer.
 
 ## The Meaning layer
 
@@ -297,8 +302,14 @@ export interface Translator<M = unknown> {
 
 Wire it with `pipeline.onGlyph((g) => translator.push(g))`. It should
 ignore glyphs it doesn't understand (check `glyph.pluginId`).
-`MorseTextTranslator` in `plugins/morse` is the reference: letter
-glyphs in, running transcript out, word breaks read from gap payloads.
+`MorseTextTranslator` in `plugins/morse` is the reference: it consumes
+the recognizer's _element_ glyphs (dots and dashes) and assembles the
+letters and words itself, reading the silences between elements — each
+element reports its length in units, so the gaps size cleanly into
+intra-letter (~1 unit), letter (~3), and word (~7) boundaries. Letters
+and words are never glyphs; they exist only as meaning. One gotcha it
+surfaces: the final letter has no following element to end it, so a
+translator wants an end-of-stream `flush()` that its driver calls.
 
 ## Conventions checklist
 

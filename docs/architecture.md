@@ -45,12 +45,13 @@ There is no single canonical "feature vector." Different signal systems need fun
 
 Instead, the DSP engine produces **named, versioned feature streams**:
 
-| Stream                                  | Contents                                                  | Primary consumers                             |
-| --------------------------------------- | --------------------------------------------------------- | --------------------------------------------- |
-| `spectrum`                              | Windowed FFT magnitudes per frame                         | Visualizations, most frequency-domain plugins |
-| `peaks`                                 | Detected spectral peaks (frequency, amplitude, sharpness) | DTMF, chords, pitch-based plugins             |
-| `envelope`                              | Amplitude envelope over time                              | Morse, rhythm-based plugins                   |
-| _(future)_ `pitch`, `chroma`, `mfcc`, … | Added as plugins need them                                | Chords, birdsong, Rocky                       |
+| Stream                                  | Contents                                                  | Primary consumers                                      |
+| --------------------------------------- | --------------------------------------------------------- | ------------------------------------------------------ |
+| `spectrum`                              | Windowed FFT magnitudes per frame                         | Visualizations, most frequency-domain plugins          |
+| `peaks`                                 | Detected spectral peaks (frequency, amplitude, sharpness) | DTMF, chords, pitch-based plugins                      |
+| `envelope`                              | Amplitude envelope over time                              | Morse, rhythm-based plugins                            |
+| `samples`                               | Raw, unwindowed samples of the analysis frame             | Plugins owning their spectral strategy (Goertzel DTMF) |
+| _(future)_ `pitch`, `chroma`, `mfcc`, … | Added as plugins need them                                | Chords, birdsong, Rocky                                |
 
 Plugins declare which streams they require in their metadata, and the pipeline delivers each stream's frames only to the plugins that declared it. (Which extractors _run_ is engine configuration today; deriving it from the active plugins' declarations is planned for when plugin sets become dynamic.) Each stream carries a schema version so streams can evolve without breaking existing plugins.
 

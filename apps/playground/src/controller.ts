@@ -12,15 +12,19 @@ import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SPECTRUM } from '@sonoglyph/core'
 import { BufferSource, MicrophoneSource, parseWav, RingBuffer } from '@sonoglyph/browser';
 import { DEFAULT_ENGINE_OPTIONS, Pipeline, tones, TsDspEngine } from '@sonoglyph/dsp';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
-import { DtmfRecognizer, frequenciesFor } from '@sonoglyph/plugin-dtmf';
+import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
 
 export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
+
+/** Which DTMF recognizer(s) feed the glyph timeline. */
+export type DecoderChoice = 'fft' | 'goertzel' | 'both';
 
 export interface PlaygroundStatus {
   mode: InputMode;
   sampleRate: number;
   windowSize: number;
   window: WindowName;
+  decoders: DecoderChoice;
   samplesReceived: number;
   chunksReceived: number;
 }
@@ -37,7 +41,9 @@ const HISTORY_SEC = 2;
 export class PlaygroundController {
   private engineOptions: DspEngineOptions = { ...DEFAULT_ENGINE_OPTIONS };
   private pipeline: Pipeline | null = null;
-  private readonly recognizer = new DtmfRecognizer();
+  private readonly fftRecognizer = new DtmfRecognizer();
+  private readonly goertzelRecognizer = new GoertzelDtmfRecognizer();
+  private decoders: DecoderChoice = 'fft';
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
 
@@ -59,6 +65,7 @@ export class PlaygroundController {
     sampleRate: DEFAULT_ENGINE_OPTIONS.sampleRate,
     windowSize: DEFAULT_ENGINE_OPTIONS.windowSize,
     window: DEFAULT_ENGINE_OPTIONS.window,
+    decoders: 'fft',
     samplesReceived: 0,
     chunksReceived: 0,
   };
@@ -80,16 +87,35 @@ export class PlaygroundController {
     for (const cb of this.listeners) cb();
   }
 
+  /** The recognizers the current decoder choice puts on the pipeline. */
+  private activeRecognizers(): (DtmfRecognizer | GoertzelDtmfRecognizer)[] {
+    if (this.decoders === 'fft') return [this.fftRecognizer];
+    if (this.decoders === 'goertzel') return [this.goertzelRecognizer];
+    return [this.fftRecognizer, this.goertzelRecognizer];
+  }
+
   private buildPipeline(): Pipeline {
     this.frameUnsub?.();
     this.glyphUnsub?.();
-    // Detach the old pipeline from the long-lived recognizer (it would
-    // otherwise keep a dead listener alive) and clear press state — a new
+    // Detach the old pipeline from the long-lived recognizers (it would
+    // otherwise keep dead listeners alive) and clear press state — a new
     // engine means a new time base.
     this.pipeline?.dispose();
-    this.recognizer.reset();
-    const pipeline = new Pipeline(new TsDspEngine(this.engineOptions));
-    pipeline.addPlugin(this.recognizer);
+    this.fftRecognizer.reset();
+    this.goertzelRecognizer.reset();
+    const recognizers = this.activeRecognizers();
+    // Compute the streams the panels always need plus whatever the active
+    // recognizers declare (the Goertzel one wants raw `samples`).
+    const streams = [
+      ...new Set([
+        STREAM_SPECTRUM,
+        STREAM_PEAKS,
+        STREAM_ENVELOPE,
+        ...recognizers.flatMap((r) => r.metadata.requiredStreams),
+      ]),
+    ];
+    const pipeline = new Pipeline(new TsDspEngine({ ...this.engineOptions, streams }));
+    for (const recognizer of recognizers) pipeline.addPlugin(recognizer);
     this.frameUnsub = pipeline.onFrame((frame) => {
       if (frame.stream === STREAM_SPECTRUM) {
         this.latest.spectrum = frame as FeatureFrame<SpectrumData>;
@@ -106,7 +132,20 @@ export class PlaygroundController {
     this.status.sampleRate = this.engineOptions.sampleRate;
     this.status.windowSize = this.engineOptions.windowSize;
     this.status.window = this.engineOptions.window;
+    this.status.decoders = this.decoders;
     return pipeline;
+  }
+
+  /**
+   * Choose which DTMF recognizer(s) run — the FFT-peaks reference, the
+   * Goertzel one, or both side by side for the live comparison. Glyph
+   * history survives so the two decoders' output can be compared.
+   */
+  setDecoders(choice: DecoderChoice): void {
+    if (choice === this.decoders) return;
+    this.decoders = choice;
+    this.pipeline = this.buildPipeline();
+    this.notify();
   }
 
   private handleSamples = (samples: Float32Array): void => {
@@ -188,14 +227,20 @@ export class PlaygroundController {
 
     await this.bufferSource?.stop();
     this.setSampleRate(sampleRate);
-    // Pad with trailing silence: recognizers detect the end of a tone by
-    // seeing silent frames, and when a buffer runs dry no frames flow at
-    // all — stream time freezes and an open press would absorb the next
-    // one. The pad must outlast the analysis window (tone energy leaks into
-    // every window that overlaps it) plus the recognizer's gap threshold.
+    // Pad with silence on both sides. Trailing: recognizers detect the end
+    // of a tone by seeing silent frames, and when a buffer runs dry no
+    // frames flow at all — stream time freezes and an open press would
+    // absorb the next one. The pad must outlast the analysis window (tone
+    // energy leaks into every window that overlaps it) plus the
+    // recognizer's gap threshold. Leading: noise-adaptive recognizers
+    // (Goertzel) calibrate their floors on what they hear first — a
+    // buffer that opens mid-tone reads as "the room sounds like this",
+    // the way any real signal is preceded by a moment of ambience.
+    const leadSec = (2 * this.engineOptions.windowSize) / sampleRate;
     const padSec = Math.max(0.3, (2 * this.engineOptions.windowSize) / sampleRate);
-    const padded = new Float32Array(samples.length + Math.round(padSec * sampleRate));
-    padded.set(samples);
+    const lead = Math.round(leadSec * sampleRate);
+    const padded = new Float32Array(lead + samples.length + Math.round(padSec * sampleRate));
+    padded.set(samples, lead);
     this.bufferSource = new BufferSource(padded, sampleRate);
     this.bufferSource.onEnded(() => {
       if (this.status.mode === 'buffer') {

@@ -25,7 +25,7 @@ import { MorseRecognizer, MorseTextTranslator, morseTiming } from '@sonoglyph/pl
 
 const EMPTY_TRANSCRIPT: MorseTranscript = { text: '', letters: [] };
 
-export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
+export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer' | 'key';
 
 /** Which signal system the playground is exploring. The input, the active
  * recognizer(s), and the output panels all follow this one choice. */
@@ -69,6 +69,14 @@ export class PlaygroundController {
   private mic: MicrophoneSource | null = null;
   private bufferSource: BufferSource | null = null;
   private audioContext: AudioContext | null = null;
+
+  /** Straight-key (spacebar) Morse state: an oscillator you hear plus a
+   * timer that feeds the pipeline tone-while-down / silence-while-up. */
+  private keyOsc: OscillatorNode | null = null;
+  private keyGain: GainNode | null = null;
+  private keyTimer: ReturnType<typeof setInterval> | null = null;
+  private keyIsDown = false;
+  private keyLastMs = 0;
 
   /** Rolling sample history for the waveform panel. */
   sampleHistory = new RingBuffer(DEFAULT_ENGINE_OPTIONS.sampleRate * HISTORY_SEC);
@@ -187,6 +195,12 @@ export class PlaygroundController {
    */
   setSystem(system: SignalSystem): void {
     if (system === this.system) return;
+    // Leaving Morse mid-key: stop the straight key so its timer doesn't
+    // keep feeding tone into the other system's pipeline.
+    if (this.status.mode === 'key') {
+      this.teardownStraightKey();
+      this.status.mode = 'idle';
+    }
     this.system = system;
     this.glyphs = [];
     this.morseTranslator.reset();
@@ -227,6 +241,97 @@ export class PlaygroundController {
     // follows in a later buffer.
     parts.push(silence((7 * unitMs) / 1000, sampleRate));
     await this.playBuffer(concat(...parts), sampleRate);
+  }
+
+  /**
+   * Straight-key input: the user holds a key (spacebar in the UI) to sound
+   * a tone and releases to stop, tapping out Morse by hand — a short tap is
+   * a dot, a long hold a dash, and the recognizer reads the durations. One
+   * key state drives two things: an oscillator you hear, and a real-time
+   * generator that feeds the pipeline tone-while-down / silence-while-up.
+   */
+  async startStraightKey(frequencyHz = 600): Promise<void> {
+    if (this.status.mode === 'key') return;
+    await this.stop();
+    // Fresh session: a hand-keyed message shouldn't inherit old glyphs.
+    this.glyphs = [];
+    this.morseTranslator.reset();
+
+    const ctx = (this.audioContext ??= new AudioContext());
+    await ctx.resume();
+    const osc = ctx.createOscillator();
+    osc.frequency.value = frequencyHz;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    this.keyOsc = osc;
+    this.keyGain = gain;
+    this.keyIsDown = false;
+    this.keyLastMs = performance.now();
+    // Feed the pipeline in ~20 ms chunks sized by real elapsed time, so the
+    // engine's stream clock tracks wall-clock and hand-keyed durations map
+    // straight to timing units.
+    this.keyTimer = setInterval(() => this.keyTick(frequencyHz), 20);
+    this.status.mode = 'key';
+    this.notify();
+  }
+
+  /** Key down: sound the tone (ramped, to avoid a click). Repeats ignored. */
+  keyDown(): void {
+    if (this.status.mode !== 'key' || this.keyIsDown) return;
+    this.keyIsDown = true;
+    if (this.keyGain && this.audioContext) {
+      this.keyGain.gain.setTargetAtTime(0.3, this.audioContext.currentTime, 0.005);
+    }
+  }
+
+  /** Key up: silence the tone. */
+  keyUp(): void {
+    if (this.status.mode !== 'key' || !this.keyIsDown) return;
+    this.keyIsDown = false;
+    if (this.keyGain && this.audioContext) {
+      this.keyGain.gain.setTargetAtTime(0, this.audioContext.currentTime, 0.005);
+    }
+  }
+
+  private keyTick(frequencyHz: number): void {
+    const now = performance.now();
+    // Cap a catch-up chunk (e.g. after the tab was backgrounded) so one
+    // tick can't inject a multi-second element.
+    const elapsedMs = Math.min(now - this.keyLastMs, 500);
+    this.keyLastMs = now;
+    const sampleRate = this.engineOptions.sampleRate;
+    const n = Math.round((elapsedMs / 1000) * sampleRate);
+    if (n <= 0) return;
+    const durationSec = n / sampleRate;
+    const chunk = this.keyIsDown
+      ? tones([{ frequencyHz, amplitude: 0.4 }], durationSec, sampleRate)
+      : silence(durationSec, sampleRate);
+    this.handleSamples(chunk);
+  }
+
+  /** Tear down the straight-key oscillator, timer, and pending letter. */
+  private teardownStraightKey(): void {
+    const wasActive = this.keyTimer !== null;
+    if (this.keyTimer !== null) {
+      clearInterval(this.keyTimer);
+      this.keyTimer = null;
+    }
+    if (this.keyOsc) {
+      try {
+        this.keyOsc.stop();
+      } catch {
+        /* already stopped */
+      }
+      this.keyOsc.disconnect();
+      this.keyOsc = null;
+    }
+    this.keyGain?.disconnect();
+    this.keyGain = null;
+    this.keyIsDown = false;
+    // Close the last hand-keyed letter — no further element will.
+    if (wasActive) this.morseTranslator.flush();
   }
 
   private handleSamples = (samples: Float32Array): void => {
@@ -284,6 +389,7 @@ export class PlaygroundController {
   }
 
   async stop(): Promise<void> {
+    this.teardownStraightKey();
     await this.mic?.stop();
     this.mic = null;
     await this.bufferSource?.stop();
@@ -300,6 +406,8 @@ export class PlaygroundController {
    * the mic will pick the tone up acoustically, which is the honest path.
    */
   async playBuffer(samples: Float32Array, sampleRate: number): Promise<void> {
+    // A queued playback supersedes a straight-key session.
+    this.teardownStraightKey();
     this.playAudible(samples, sampleRate);
     // Skip the direct feed while the mic is live (acoustic pickup is the
     // honest path) or still starting (feeding now would leave this buffer

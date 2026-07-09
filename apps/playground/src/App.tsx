@@ -40,7 +40,7 @@ function Playground() {
         <div
           role="group"
           aria-label="Signal system"
-          className="flex overflow-hidden rounded-md border border-edge"
+          className="flex divide-x divide-edge overflow-hidden rounded-md border border-edge"
         >
           {SYSTEMS.map((s) => (
             <button

@@ -187,20 +187,72 @@ function DtmfInput({ controller, run }: { controller: PlaygroundController; run:
 function MorseInput({ controller, run }: { controller: PlaygroundController; run: Run }) {
   const [text, setText] = useState('SOS');
   const code = textToMorse(text);
+  const keying = controller.status.mode === 'key';
+
+  // While the straight key is on, the spacebar IS the key: hold to sound a
+  // tone, release to stop. preventDefault stops the page scrolling and the
+  // focused button re-triggering; repeats are ignored so one hold is one
+  // element of the held length.
+  useEffect(() => {
+    if (!keying) return;
+    const down = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || event.repeat) return;
+      event.preventDefault();
+      controller.keyDown();
+    };
+    const up = (event: KeyboardEvent) => {
+      if (event.code !== 'Space') return;
+      event.preventDefault();
+      controller.keyUp();
+    };
+    window.addEventListener('keydown', down);
+    window.addEventListener('keyup', up);
+    return () => {
+      window.removeEventListener('keydown', down);
+      window.removeEventListener('keyup', up);
+    };
+  }, [controller, keying]);
+
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-end gap-2">
         <label className={`${LABEL} grow`}>
           Message to key
-          <input value={text} onChange={(event) => setText(event.target.value)} placeholder="SOS" />
+          <input
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="SOS"
+            disabled={keying}
+          />
         </label>
-        <button onClick={() => run(() => controller.playMorse(text))} disabled={!code}>
+        <button onClick={() => run(() => controller.playMorse(text))} disabled={!code || keying}>
           Key it
         </button>
       </div>
       <p aria-live="polite" className="font-mono text-[12.5px] tracking-widest text-faint">
         {code || 'Nothing encodable yet — letters, digits, and .,?/= work.'}
       </p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          className={keying ? 'border-accent bg-accent-dim' : ''}
+          onClick={(event) => {
+            // Drop focus so the spacebar keys the tone instead of
+            // re-clicking this button.
+            event.currentTarget.blur();
+            run(() => (keying ? controller.stop() : controller.startStraightKey()));
+          }}
+        >
+          {keying ? '● Stop straight key' : 'Straight key'}
+        </button>
+        {keying && (
+          <span className="text-[12.5px] text-faint">
+            Hold <kbd className="rounded border border-edge px-1 font-mono text-[11px]">Space</kbd>{' '}
+            to sound a tone — short tap = dot, long hold = dash.
+          </span>
+        )}
+      </div>
+
       <p className="text-[12.5px] leading-normal text-faint">
         Dot = 1 unit, dash = 3; letters split on a 3-unit gap, words on 7. The recognizer tracks the
         sender’s speed, so brisk or slow both decode.

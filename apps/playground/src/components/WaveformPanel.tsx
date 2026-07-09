@@ -1,6 +1,6 @@
 import { useRef } from 'react';
-import { scaleCanvas, useAnimationFrame, useController } from '../hooks.js';
-import { Panel } from './Panel.js';
+import { scaleCanvas, useAnimationFrame, useController } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const EXPLAINER =
   'The raw signal in the time domain: amplitude against time, the newest half-second ' +

@@ -1,5 +1,5 @@
 import type { AudioSource } from '@sonoglyph/core';
-import { CAPTURE_PROCESSOR_NAME, ensureCaptureWorklet } from './worklet.js';
+import { CAPTURE_PROCESSOR_NAME, ensureCaptureWorklet } from './worklet.ts';
 
 /**
  * Live microphone input:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { goertzelMagnitude, goertzelPower } from './goertzel.js';
-import { sine, tones, whiteNoise } from './generate.js';
+import { goertzelMagnitude, goertzelPower } from './goertzel.ts';
+import { sine, tones, whiteNoise } from './generate.ts';
 
 const SAMPLE_RATE = 48_000;
 

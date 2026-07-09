@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BufferSource } from './buffer-source.js';
+import { BufferSource } from './buffer-source.ts';
 
 describe('BufferSource', () => {
   beforeEach(() => vi.useFakeTimers());

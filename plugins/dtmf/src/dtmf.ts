@@ -2,7 +2,7 @@ import type { FeatureFrame, PeaksData, PluginMetadata, SpectralPeak } from '@son
 import { STREAM_PEAKS } from '@sonoglyph/core';
 import type { FrameMatch, Run } from '@sonoglyph/plugin-sdk';
 import { SegmentingRecognizer } from '@sonoglyph/plugin-sdk';
-import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
+import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.ts';
 
 export interface DtmfOptions {
   /**

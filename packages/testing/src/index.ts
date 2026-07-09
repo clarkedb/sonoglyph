@@ -17,5 +17,5 @@ export {
   type ToneStep,
   type ToneSequenceOptions,
   type FanRumbleOptions,
-} from './signals.js';
-export { decode, symbols, type DecodeOptions } from './decode.js';
+} from './signals.ts';
+export { decode, symbols, type DecodeOptions } from './decode.ts';

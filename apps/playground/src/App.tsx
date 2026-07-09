@@ -1,13 +1,13 @@
 import { useMemo } from 'react';
-import type { SignalSystem } from './controller.js';
-import { PlaygroundController } from './controller.js';
-import { ControllerContext, useController, useControllerTick } from './hooks.js';
-import { FeaturesPanel } from './components/FeaturesPanel.js';
-import { GlyphTimeline } from './components/GlyphTimeline.js';
-import { InputPanel } from './components/InputPanel.js';
-import { MeaningPanel } from './components/MeaningPanel.js';
-import { SpectrumPanel } from './components/SpectrumPanel.js';
-import { WaveformPanel } from './components/WaveformPanel.js';
+import type { SignalSystem } from './controller.ts';
+import { PlaygroundController } from './controller.ts';
+import { ControllerContext, useController, useControllerTick } from './hooks.ts';
+import { FeaturesPanel } from './components/FeaturesPanel.tsx';
+import { GlyphTimeline } from './components/GlyphTimeline.tsx';
+import { InputPanel } from './components/InputPanel.tsx';
+import { MeaningPanel } from './components/MeaningPanel.tsx';
+import { SpectrumPanel } from './components/SpectrumPanel.tsx';
+import { WaveformPanel } from './components/WaveformPanel.tsx';
 
 export function App() {
   const controller = useMemo(() => new PlaygroundController(), []);

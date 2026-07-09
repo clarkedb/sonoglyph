@@ -1,6 +1,6 @@
 import type { Glyph, Translator, Unsubscribe } from '@sonoglyph/core';
-import { charFor } from './code.js';
-import type { MorseElementPayload } from './morse.js';
+import { charFor } from './code.ts';
+import type { MorseElementPayload } from './morse.ts';
 
 /** One decoded letter of the transcript. */
 export interface MorseLetter {

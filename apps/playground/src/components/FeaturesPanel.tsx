@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { useAnimationFrame, useController } from '../hooks.js';
-import { Panel } from './Panel.js';
+import { useAnimationFrame, useController } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const EXPLAINER =
   'Feature frames are what recognizer plugins actually consume — the DSP engine reduces each ' +

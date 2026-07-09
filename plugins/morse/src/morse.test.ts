@@ -4,11 +4,11 @@ import { STREAM_ENVELOPE } from '@sonoglyph/core';
 import { mix, whiteNoise } from '@sonoglyph/dsp';
 import type { ToneStep } from '@sonoglyph/testing';
 import { decode, toneSequence } from '@sonoglyph/testing';
-import { morseTiming } from './code.js';
-import type { MorseElementPayload } from './morse.js';
-import { MorseRecognizer } from './morse.js';
-import type { MorseTranscript } from './translator.js';
-import { MorseTextTranslator } from './translator.js';
+import { morseTiming } from './code.ts';
+import type { MorseElementPayload } from './morse.ts';
+import { MorseRecognizer } from './morse.ts';
+import type { MorseTranscript } from './translator.ts';
+import { MorseTextTranslator } from './translator.ts';
 
 const SAMPLE_RATE = 48_000;
 

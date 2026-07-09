@@ -8,7 +8,7 @@ import type { FeatureFrame, Glyph, PeaksData, RecognizerPlugin } from '@sonoglyp
 import { STREAM_PEAKS } from '@sonoglyph/core';
 import { mix } from '@sonoglyph/dsp';
 import { defineRecognizer } from '@sonoglyph/plugin-sdk';
-import { decode, fanRumble, symbols, toneSequence } from './index.js';
+import { decode, fanRumble, symbols, toneSequence } from './index.ts';
 
 // --- docs/plugins.md step 2: the classifier -------------------------------
 

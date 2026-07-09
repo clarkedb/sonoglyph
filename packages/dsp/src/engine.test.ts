@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { EnvelopeData, PeaksData, SamplesData, SpectrumData } from '@sonoglyph/core';
 import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SAMPLES, STREAM_SPECTRUM } from '@sonoglyph/core';
-import { TsDspEngine } from './engine.js';
-import { silence, sine } from './generate.js';
+import { TsDspEngine } from './engine.ts';
+import { silence, sine } from './generate.ts';
 
 const SAMPLE_RATE = 48_000;
 

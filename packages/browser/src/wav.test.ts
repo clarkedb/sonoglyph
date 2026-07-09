@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { encodeWavPcm16, parseWav } from './wav.js';
+import { encodeWavPcm16, parseWav } from './wav.ts';
 
 function sine(freq: number, durationSec: number, sampleRate: number): Float32Array {
   const n = Math.round(durationSec * sampleRate);

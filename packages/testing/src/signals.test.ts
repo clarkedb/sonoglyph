@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { whiteNoise } from '@sonoglyph/dsp';
-import { fanRumble, pinkNoise, toneSequence } from './signals.js';
+import { fanRumble, pinkNoise, toneSequence } from './signals.ts';
 
 const SAMPLE_RATE = 48_000;
 

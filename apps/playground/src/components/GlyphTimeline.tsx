@@ -1,9 +1,9 @@
 import type { Glyph } from '@sonoglyph/core';
 import type { DtmfPayload, GoertzelDtmfPayload } from '@sonoglyph/plugin-dtmf';
 import type { MorseElementPayload } from '@sonoglyph/plugin-morse';
-import type { DecoderChoice } from '../controller.js';
-import { useController, useControllerTick } from '../hooks.js';
-import { Panel } from './Panel.js';
+import type { DecoderChoice } from '../controller.ts';
+import { useController, useControllerTick } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const DTMF_EXPLAINER =
   'Glyphs are the output of recognition: a symbol with a time span, a confidence, and ' +

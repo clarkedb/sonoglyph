@@ -1,6 +1,6 @@
-export { MorseRecognizer, DEFAULT_MORSE_OPTIONS } from './morse.js';
-export type { MorseOptions, MorseElementPayload } from './morse.js';
-export { MorseTextTranslator } from './translator.js';
-export type { MorseLetter, MorseTranscript } from './translator.js';
-export { MORSE_CODE, charFor, textToMorse, morseTiming } from './code.js';
-export type { MorseSegment } from './code.js';
+export { MorseRecognizer, DEFAULT_MORSE_OPTIONS } from './morse.ts';
+export type { MorseOptions, MorseElementPayload } from './morse.ts';
+export { MorseTextTranslator } from './translator.ts';
+export type { MorseLetter, MorseTranscript } from './translator.ts';
+export { MORSE_CODE, charFor, textToMorse, morseTiming } from './code.ts';
+export type { MorseSegment } from './code.ts';

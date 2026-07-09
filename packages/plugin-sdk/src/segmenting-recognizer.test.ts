@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FeatureFrame, Glyph, PluginMetadata } from '@sonoglyph/core';
-import type { GlyphInit, RecognizerSpec, Run } from './segmenting-recognizer.js';
-import { defineRecognizer, SegmentingRecognizer } from './segmenting-recognizer.js';
+import type { GlyphInit, RecognizerSpec, Run } from './segmenting-recognizer.ts';
+import { defineRecognizer, SegmentingRecognizer } from './segmenting-recognizer.ts';
 
 /**
  * Frames are hand-built: the machine only reads stream/time/span/hop, so

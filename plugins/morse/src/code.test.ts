@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { charFor, morseTiming, textToMorse } from './code.js';
+import { charFor, morseTiming, textToMorse } from './code.ts';
 
 describe('textToMorse', () => {
   it('encodes letters, digits, and word breaks', () => {

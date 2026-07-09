@@ -14,7 +14,7 @@ export {
   SegmentingRecognizer,
   type FrameMatch,
   type GlyphInit,
-  type Press,
+  type Run,
   type RecognizerSpec,
   type SegmentationOptions,
 } from './segmenting-recognizer.js';

@@ -25,18 +25,21 @@ export interface FrameMatch<P = unknown> {
 export interface SegmentationOptions {
   /** A symbol must persist at least this long to emit a glyph. */
   minDurationMs: number;
-  /** Silence (or a different symbol) this long ends the current press. */
+  /** Silence (or a different symbol) this long ends the current run. */
   minGapMs: number;
 }
 
 /**
- * A finished press, handed to `finalize`. Aggregates everything the machine
- * accumulated while the symbol persisted.
+ * A finished run — the contiguous stretch of frames that matched one
+ * symbol — handed to `finalize`. Aggregates everything the machine
+ * accumulated while the symbol persisted. What a run *means* is the
+ * plugin's business: a DTMF run is a key press, a Morse run is a key-down,
+ * a chirp run is one beep.
  */
-export interface Press<P = unknown> {
+export interface Run<P = unknown> {
   /** The symbol that persisted. */
   symbol: string;
-  /** Start of the press, in seconds of stream time. */
+  /** Start of the run, in seconds of stream time. */
   start: number;
   /**
    * Span-corrected duration in seconds. A tone shows up in every frame
@@ -44,7 +47,7 @@ export interface Press<P = unknown> {
    * the tone by roughly half a window; this is corrected for already.
    */
   duration: number;
-  /** Frames covering the press, including absorbed dropouts and blips. */
+  /** Frames covering the run, including absorbed dropouts and blips. */
   frameCount: number;
   /** The matches that actually hit — the basis for aggregated payloads. */
   matches: FrameMatch<P>[];
@@ -54,9 +57,9 @@ export interface Press<P = unknown> {
 
 /** What `finalize` may override on the emitted glyph. */
 export interface GlyphInit<G = unknown> {
-  /** Defaults to the press's symbol. */
+  /** Defaults to the run's symbol. */
   symbol?: string;
-  /** Defaults to the press's mean confidence. */
+  /** Defaults to the run's mean confidence. */
   confidence?: number;
   /** Defaults to no payload. */
   payload?: G;
@@ -75,13 +78,13 @@ export interface RecognizerSpec<P = unknown, G = unknown> {
    */
   classify(frame: FeatureFrame): FrameMatch<P> | null;
   /**
-   * Turn a finished press into the emitted glyph, or veto it by returning
-   * null. Omit it to emit the press's symbol and mean confidence as-is.
+   * Turn a finished run into the emitted glyph, or veto it by returning
+   * null. Omit it to emit the run's symbol and mean confidence as-is.
    * This is where per-frame payloads get aggregated (e.g. averaging the
-   * detected frequencies across the press) and where duration-dependent
+   * detected frequencies across the run) and where duration-dependent
    * symbols are decided (e.g. Morse dot vs. dash).
    */
-  finalize?(press: Press<P>): GlyphInit<G> | null;
+  finalize?(run: Run<P>): GlyphInit<G> | null;
   /**
    * Stream to classify. Defaults to `metadata.requiredStreams[0]`. The
    * machine classifies exactly ONE stream — frames of any other stream
@@ -93,13 +96,13 @@ export interface RecognizerSpec<P = unknown, G = unknown> {
   stream?: string;
 }
 
-/** An in-progress press being accumulated across frames. */
+/** An in-progress run being accumulated across frames. */
 interface Tracking<P> {
   symbol: string;
   startTime: number;
   /** Analysis window length of the frames, in seconds. */
   span: number;
-  /** Frames covering the press, including absorbed dropouts/blips — the
+  /** Frames covering the run, including absorbed dropouts/blips — the
    * basis for duration. */
   frameCount: number;
   /** Frames since the symbol was last seen (silence or another symbol). */
@@ -113,13 +116,13 @@ interface Tracking<P> {
  * canonical user.
  *
  * Per frame, `classify` makes an instantaneous judgment. Across frames,
- * the machine turns those judgments into presses: a symbol must persist
+ * the machine turns those judgments into runs: a symbol must persist
  * for `minDurationMs` to register, and a `minGapMs` gap — silence or a
- * different symbol — must elapse before the press ends. Treating symbol
+ * different symbol — must elapse before the run ends. Treating symbol
  * changes like silence makes the machine robust to noise flipping a single
  * frame to a neighboring symbol, and it is how "55" becomes two glyphs
- * instead of one long one. The glyph is emitted when the press ends, so
- * its duration covers the whole press.
+ * instead of one long one. The glyph is emitted when the run ends, so
+ * its duration covers the whole run.
  */
 export class SegmentingRecognizer<P = unknown, G = unknown> implements RecognizerPlugin {
   readonly metadata: PluginMetadata;
@@ -150,7 +153,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     const hop = frame.hop;
 
     if (this.tracking && match && match.symbol === this.tracking.symbol) {
-      // The press continues. Absorbed frames since the symbol was last
+      // The run continues. Absorbed frames since the symbol was last
       // seen — dropouts or noise-flipped misclassifications — are credited
       // to the duration: the signal was evidently sounding right through
       // them.
@@ -164,13 +167,13 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     if (this.tracking) {
       // Silence AND different-symbol frames both count toward the gap.
       // Noise can flip a single frame to a neighboring symbol, so a symbol
-      // change only takes effect once it outlasts the gap threshold — same
-      // debouncing that separates presses from dropouts.
+      // change only takes effect once it outlasts the gap threshold — the
+      // same debouncing that separates back-to-back runs from dropouts.
       this.tracking.gapFrames++;
       const gapSec = this.tracking.gapFrames * hop;
       if (gapSec >= this.segmentation.minGapMs / 1000) {
         // Detach before emitting: a listener may re-enter process()/
-        // reset() synchronously, and it must see the press as finished.
+        // reset() synchronously, and it must see the run as finished.
         const finished = this.tracking;
         this.tracking = null;
         this.finish(finished, hop);
@@ -198,7 +201,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     this.tracking = null;
   }
 
-  /** Emit a glyph for a finished press, if it lasted long enough. */
+  /** Emit a glyph for a finished run, if it lasted long enough. */
   private finish(t: Tracking<P>, hop: number): void {
     const duration = t.frameCount * hop - t.span / 2;
     if (duration < this.segmentation.minDurationMs / 1000) return;
@@ -207,7 +210,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     for (const m of t.matches) confidence += m.confidence;
     confidence = clamp01(confidence / t.matches.length);
 
-    const press: Press<P> = {
+    const run: Run<P> = {
       symbol: t.symbol,
       start: t.startTime,
       duration,
@@ -215,18 +218,18 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
       matches: t.matches,
       confidence,
     };
-    const init = this.spec.finalize ? this.spec.finalize(press) : {};
+    const init = this.spec.finalize ? this.spec.finalize(run) : {};
     // == also catches a finalize that returned nothing at all (a plain-JS
     // author's void arrow function): treat it as a veto, not a crash.
     if (init == null) return;
 
     const glyph: Glyph<G> = {
-      symbol: init.symbol ?? press.symbol,
+      symbol: init.symbol ?? run.symbol,
       pluginId: this.metadata.id,
-      start: press.start,
-      duration: press.duration,
+      start: run.start,
+      duration: run.duration,
       // The Glyph contract says 0..1, so hold overriders to it too.
-      confidence: init.confidence !== undefined ? clamp01(init.confidence) : press.confidence,
+      confidence: init.confidence !== undefined ? clamp01(init.confidence) : run.confidence,
       ...(init.payload !== undefined ? { payload: init.payload } : {}),
     };
     for (const cb of this.listeners) cb(glyph);

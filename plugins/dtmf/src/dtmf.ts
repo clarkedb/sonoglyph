@@ -1,6 +1,6 @@
 import type { FeatureFrame, PeaksData, PluginMetadata, SpectralPeak } from '@sonoglyph/core';
 import { STREAM_PEAKS } from '@sonoglyph/core';
-import type { FrameMatch, Press } from '@sonoglyph/plugin-sdk';
+import type { FrameMatch, Run } from '@sonoglyph/plugin-sdk';
 import { SegmentingRecognizer } from '@sonoglyph/plugin-sdk';
 import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
 
@@ -64,10 +64,11 @@ interface DtmfMatchDetail {
  * Per frame, `classify` looks for one peak near a low-group nominal and one
  * near a high-group nominal (a per-frame classification). Turning those
  * classifications into key presses — a key must persist for `minToneMs`,
- * a `minGapMs` gap ends the press, single flipped frames are debounced —
- * is entirely the plugin SDK's segmentation machine; this plugin is the
- * machine's reference user. `finalize` averages the detected frequencies
- * across the press into the glyph payload.
+ * a `minGapMs` gap ends it, single flipped frames are debounced — is
+ * entirely the plugin SDK's segmentation machine: a machine "run" IS a
+ * key press in this domain; this plugin is the machine's reference user.
+ * `finalize` averages the detected frequencies across the run into the
+ * glyph payload.
  */
 export class DtmfRecognizer extends SegmentingRecognizer<DtmfMatchDetail, DtmfPayload> {
   readonly options: DtmfOptions;
@@ -85,7 +86,7 @@ export class DtmfRecognizer extends SegmentingRecognizer<DtmfMatchDetail, DtmfPa
       metadata,
       segmentation: { minDurationMs: opts.minToneMs, minGapMs: opts.minGapMs },
       classify: (frame: FeatureFrame) => classifyPeaks((frame.data as PeaksData).peaks, opts),
-      finalize: aggregatePress,
+      finalize: aggregateRun,
     });
     this.options = opts;
   }
@@ -155,17 +156,17 @@ function matchGroup(
 }
 
 /** Average the per-frame detail into the glyph payload. */
-function aggregatePress(press: Press<DtmfMatchDetail>): { payload: DtmfPayload } {
+function aggregateRun(run: Run<DtmfMatchDetail>): { payload: DtmfPayload } {
   let lowHz = 0;
   let highHz = 0;
   let twistDb = 0;
-  for (const m of press.matches) {
+  for (const m of run.matches) {
     lowHz += m.payload!.lowHz;
     highHz += m.payload!.highHz;
     twistDb += m.payload!.twistDb;
   }
-  const n = press.matches.length;
-  const first = press.matches[0]!.payload!;
+  const n = run.matches.length;
+  const first = run.matches[0]!.payload!;
   return {
     payload: {
       lowHz: lowHz / n,

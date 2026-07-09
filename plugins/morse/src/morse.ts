@@ -66,7 +66,7 @@ const METADATA: PluginMetadata = Object.freeze({
  *
  * Two layers of glyphs come out. Elements ("." / "-") are the plugin-SDK
  * segmentation machine wearing a different classifier: `rms ≥ threshold`
- * is the whole per-frame judgment, and `finalize` names the press by its
+ * is the whole per-frame judgment, and `finalize` names the run by its
  * duration. Letters ("K", "7", "?" when the code is unknown) are
  * aggregated here on top: a gap of ~3 units closes the letter — which is
  * why this is the segmentation stress test; in Morse the *silences* carry
@@ -120,9 +120,9 @@ export class MorseRecognizer implements RecognizerPlugin {
         if (rms < this.options.onThreshold) return null;
         return { symbol: 'key', confidence: Math.min(1, rms / (2 * this.options.onThreshold)) };
       },
-      finalize: (press) => {
-        const units = press.duration / this.unitSec;
-        this.adapt(press.duration);
+      finalize: (run) => {
+        const units = run.duration / this.unitSec;
+        this.adapt(run.duration);
         // A dot is 1 unit, a dash 3: the boundary sits at 2.
         return {
           symbol: units < 2 ? '.' : '-',

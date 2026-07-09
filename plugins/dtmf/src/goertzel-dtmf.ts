@@ -1,7 +1,7 @@
 import type { FeatureFrame, PluginMetadata, SamplesData } from '@sonoglyph/core';
 import { STREAM_SAMPLES } from '@sonoglyph/core';
 import { goertzelPower } from '@sonoglyph/dsp';
-import type { FrameMatch, Press } from '@sonoglyph/plugin-sdk';
+import type { FrameMatch, Run } from '@sonoglyph/plugin-sdk';
 import { SegmentingRecognizer } from '@sonoglyph/plugin-sdk';
 import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
 
@@ -152,7 +152,7 @@ export class GoertzelDtmfRecognizer extends SegmentingRecognizer<
       metadata,
       segmentation: { minDurationMs: opts.minToneMs, minGapMs: opts.minGapMs },
       classify: makeClassifier(opts),
-      finalize: aggregatePress,
+      finalize: aggregateRun,
     });
     this.options = opts;
   }
@@ -321,15 +321,15 @@ function highPass(samples: Float32Array, cutoffHz: number, sampleRate: number): 
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
 
 /** Average the per-frame detail into the glyph payload. */
-function aggregatePress(press: Press<GoertzelMatchDetail>): { payload: GoertzelDtmfPayload } {
+function aggregateRun(run: Run<GoertzelMatchDetail>): { payload: GoertzelDtmfPayload } {
   let twistDb = 0;
   let snrDb = 0;
-  for (const m of press.matches) {
+  for (const m of run.matches) {
     twistDb += m.payload!.twistDb;
     snrDb += m.payload!.snrDb;
   }
-  const n = press.matches.length;
-  const first = press.matches[0]!.payload!;
+  const n = run.matches.length;
+  const first = run.matches[0]!.payload!;
   return {
     payload: {
       nominalLowHz: first.nominalLowHz,

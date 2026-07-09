@@ -176,6 +176,19 @@ describe('MorseTextTranslator (the Meaning layer: elements → letters → words
     expect(transcribe(morseSignal('SOS', { noiseAmplitude: 0.03 })).text).toBe('SOS');
   });
 
+  it('closePending() commits the current letter, before any next element', () => {
+    const translator = new MorseTextTranslator();
+    for (const glyph of decodeElements(morseSignal('R'))) translator.push(glyph); // ".-."
+    expect(translator.hasPending).toBe(true);
+    expect(translator.value.text).toBe('');
+    translator.closePending();
+    expect(translator.value.text).toBe('R');
+    expect(translator.hasPending).toBe(false);
+    // Idempotent: nothing pending, nothing added.
+    translator.closePending();
+    expect(translator.value.letters).toHaveLength(1);
+  });
+
   it('needs flush to close the final letter (no following element ends it)', () => {
     const translator = new MorseTextTranslator();
     // "E" is a single dot: nothing follows it to prove the letter ended.

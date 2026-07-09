@@ -20,8 +20,12 @@ import {
 } from '@sonoglyph/dsp';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
-import type { MorseTranscript } from '@sonoglyph/plugin-morse';
+import type { MorseElementPayload, MorseTranscript } from '@sonoglyph/plugin-morse';
 import { MorseRecognizer, MorseTextTranslator, morseTiming } from '@sonoglyph/plugin-morse';
+
+/** True silence this many timing units closes the current Morse letter —
+ * above the 1-unit intra-letter gap, below the 3-unit letter gap. */
+const MORSE_LETTER_CLOSE_UNITS = 2;
 
 const EMPTY_TRANSCRIPT: MorseTranscript = { text: '', letters: [] };
 
@@ -59,7 +63,12 @@ export class PlaygroundController {
   private pipeline: Pipeline | null = null;
   private readonly fftRecognizer = new DtmfRecognizer();
   private readonly goertzelRecognizer = new GoertzelDtmfRecognizer();
-  private readonly morseRecognizer = new MorseRecognizer();
+  // Seed the unit estimate at 120 ms (~10 WPM), matching playMorse's own
+  // unit and comfortably covering hand keying on the straight key — low
+  // enough to still adapt down for brisk senders. A smaller seed makes a
+  // normal intra-letter gap measure near the letter-gap threshold before
+  // adaptation catches up, splitting a letter into single-dot pieces.
+  private readonly morseRecognizer = new MorseRecognizer({ unitMs: 120 });
   private readonly morseTranslator = new MorseTextTranslator();
   private system: SignalSystem = 'dtmf';
   private decoders: DecoderChoice = 'fft';
@@ -77,6 +86,14 @@ export class PlaygroundController {
   private keyTimer: ReturnType<typeof setInterval> | null = null;
   private keyIsDown = false;
   private keyLastMs = 0;
+
+  /** Live Morse letter-close tracking, driven by the envelope: the unit
+   * length from the last element, and the stream time a tone was last
+   * heard. When silence outlasts the letter gap, the pending letter is
+   * committed — this is what makes a hand-keyed letter appear on the
+   * pause, without waiting for the next element or a stop. */
+  private morseUnitSec = 0;
+  private morseLastActiveTime = 0;
 
   /** Rolling sample history for the waveform panel. */
   sampleHistory = new RingBuffer(DEFAULT_ENGINE_OPTIONS.sampleRate * HISTORY_SEC);
@@ -169,6 +186,7 @@ export class PlaygroundController {
         this.latest.peaks = frame as FeatureFrame<PeaksData>;
       } else if (frame.stream === STREAM_ENVELOPE) {
         this.latest.envelope = frame as FeatureFrame<EnvelopeData>;
+        if (this.system === 'morse') this.trackMorseSilence(frame as FeatureFrame<EnvelopeData>);
       }
     });
     this.glyphUnsub = pipeline.onGlyph((glyph) => {
@@ -177,8 +195,13 @@ export class PlaygroundController {
       // assembles letters/words, ignoring glyphs it doesn't understand.
       // (It publishes via onMeaning, wired in the constructor.)
       this.morseTranslator.push(glyph);
+      const units = (glyph.payload as MorseElementPayload | undefined)?.units;
+      if (glyph.pluginId === 'morse' && units) this.morseUnitSec = glyph.duration / units;
       this.notify();
     });
+    // A new engine restarts the clock and the signal.
+    this.morseUnitSec = 0;
+    this.morseLastActiveTime = 0;
     this.status.sampleRate = this.engineOptions.sampleRate;
     this.status.windowSize = this.engineOptions.windowSize;
     this.status.window = this.engineOptions.window;
@@ -332,6 +355,26 @@ export class PlaygroundController {
     this.keyIsDown = false;
     // Close the last hand-keyed letter — no further element will.
     if (wasActive) this.morseTranslator.flush();
+  }
+
+  /**
+   * Close a hand-keyed Morse letter the moment the sender pauses. Keyed off
+   * the live envelope, not the (latency-delayed) element glyphs: any frame
+   * with a tone resets the silence clock, so a sounding tone can never be
+   * mistaken for the gap after a letter. When true silence outlasts the
+   * letter gap, commit the pending letter.
+   */
+  private trackMorseSilence(frame: FeatureFrame<EnvelopeData>): void {
+    if (frame.data.rms >= this.morseRecognizer.options.onThreshold) {
+      this.morseLastActiveTime = frame.time;
+      return;
+    }
+    if (
+      this.morseUnitSec > 0 &&
+      frame.time - this.morseLastActiveTime >= MORSE_LETTER_CLOSE_UNITS * this.morseUnitSec
+    ) {
+      this.morseTranslator.closePending();
+    }
   }
 
   private handleSamples = (samples: Float32Array): void => {

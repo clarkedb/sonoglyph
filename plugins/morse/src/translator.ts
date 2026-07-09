@@ -95,6 +95,23 @@ export class MorseTextTranslator implements Translator<MorseTranscript> {
     this.lastUnitSec = unitSec;
   }
 
+  /** True while a letter is still accumulating elements. */
+  get hasPending(): boolean {
+    return this.code !== '';
+  }
+
+  /**
+   * Close the letter currently accumulating, if any — used to resolve a
+   * letter the moment the sender pauses, rather than waiting for the next
+   * element to prove the gap. The caller decides *when* enough silence has
+   * elapsed (it watches the live signal); this just commits the letter.
+   * lastEnd is left in place so the next element still measures its gap —
+   * and thus a word break — from the last real element.
+   */
+  closePending(): void {
+    if (this.code !== '') this.emitLetter();
+  }
+
   /**
    * Close any letter still accumulating (the last one has no following
    * element to end it) and break continuity, so a later element starts a
@@ -102,7 +119,7 @@ export class MorseTextTranslator implements Translator<MorseTranscript> {
    * ends or the pipeline is rebuilt.
    */
   flush(): void {
-    if (this.code !== '') this.emitLetter();
+    this.closePending();
     this.lastEnd = null;
     this.forceBreak = true;
   }

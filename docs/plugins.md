@@ -197,8 +197,8 @@ import { describe, expect, it } from 'vitest';
 import type { Glyph } from '@sonoglyph/core';
 import { decode, fanRumble, symbols, toneSequence } from '@sonoglyph/testing';
 import { mix } from '@sonoglyph/dsp';
-import type { ChirpPayload } from './chirp.js';
-import { createChirpRecognizer } from './chirp.js';
+import type { ChirpPayload } from './chirp.ts';
+import { createChirpRecognizer } from './chirp.ts';
 
 describe('chirp recognizer', () => {
   const threeChirps = () =>

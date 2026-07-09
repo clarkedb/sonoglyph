@@ -4,11 +4,11 @@ import { STREAM_SAMPLES } from '@sonoglyph/core';
 import { mix, whiteNoise } from '@sonoglyph/dsp';
 import type { ToneStep } from '@sonoglyph/testing';
 import { decode, fanRumble, symbols, toneSequence } from '@sonoglyph/testing';
-import { DtmfRecognizer } from './dtmf.js';
-import type { DtmfKey } from './frequencies.js';
-import { frequenciesFor } from './frequencies.js';
-import type { GoertzelDtmfPayload } from './goertzel-dtmf.js';
-import { GoertzelDtmfRecognizer } from './goertzel-dtmf.js';
+import { DtmfRecognizer } from './dtmf.ts';
+import type { DtmfKey } from './frequencies.ts';
+import { frequenciesFor } from './frequencies.ts';
+import type { GoertzelDtmfPayload } from './goertzel-dtmf.ts';
+import { GoertzelDtmfRecognizer } from './goertzel-dtmf.ts';
 
 const SAMPLE_RATE = 48_000;
 

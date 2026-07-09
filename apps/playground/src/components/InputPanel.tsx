@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { ALL_KEYS } from '@sonoglyph/plugin-dtmf';
 import { textToMorse } from '@sonoglyph/plugin-morse';
-import type { PlaygroundController } from '../controller.js';
-import { useController, useControllerTick } from '../hooks.js';
-import { Panel } from './Panel.js';
+import type { PlaygroundController } from '../controller.ts';
+import { useController, useControllerTick } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const DTMF_EXPLAINER =
   'Everything starts as samples: numbers measuring air pressure thousands of times per ' +

@@ -17,4 +17,4 @@ export {
   type Run,
   type RecognizerSpec,
   type SegmentationOptions,
-} from './segmenting-recognizer.js';
+} from './segmenting-recognizer.ts';

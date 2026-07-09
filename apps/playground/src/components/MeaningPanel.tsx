@@ -1,6 +1,6 @@
 import type { MorseLetter } from '@sonoglyph/plugin-morse';
-import { useController, useControllerTick } from '../hooks.js';
-import { Panel } from './Panel.js';
+import { useController, useControllerTick } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const EXPLAINER =
   'The last stage: meaning. The recognizer emits dots and dashes (glyphs); turning them into ' +

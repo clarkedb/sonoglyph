@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import type { WindowName } from '@sonoglyph/core';
 import { WINDOW_NAMES } from '@sonoglyph/dsp';
 import { HIGH_GROUP, LOW_GROUP } from '@sonoglyph/plugin-dtmf';
-import { scaleCanvas, useAnimationFrame, useController, useControllerTick } from '../hooks.js';
-import { Panel } from './Panel.js';
+import { scaleCanvas, useAnimationFrame, useController, useControllerTick } from '../hooks.ts';
+import { Panel } from './Panel.tsx';
 
 const EXPLAINER =
   'The FFT answers "which frequencies is this signal made of?" — amplitude (in dB) against ' +

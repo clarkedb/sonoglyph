@@ -3,7 +3,7 @@ import { STREAM_SAMPLES } from '@sonoglyph/core';
 import { goertzelPower } from '@sonoglyph/dsp';
 import type { FrameMatch, Run } from '@sonoglyph/plugin-sdk';
 import { SegmentingRecognizer } from '@sonoglyph/plugin-sdk';
-import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
+import { HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.ts';
 
 export interface GoertzelDtmfOptions {
   /** A key must persist at least this long to count as a press. */

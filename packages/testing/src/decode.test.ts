@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { EnvelopeData, FeatureFrame } from '@sonoglyph/core';
 import { STREAM_ENVELOPE } from '@sonoglyph/core';
 import { defineRecognizer } from '@sonoglyph/plugin-sdk';
-import { decode, symbols } from './decode.js';
-import { toneSequence } from './signals.js';
+import { decode, symbols } from './decode.ts';
+import { toneSequence } from './signals.ts';
 
 /**
  * A deliberately dumb plugin — "is anything sounding?" — built with the

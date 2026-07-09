@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ALL_KEYS, frequenciesFor, HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.js';
+import { ALL_KEYS, frequenciesFor, HIGH_GROUP, keyFor, LOW_GROUP } from './frequencies.ts';
 
 describe('DTMF frequency plan', () => {
   it('has 16 keys', () => {

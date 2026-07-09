@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeWindow, windowSum, WINDOW_NAMES } from './window.js';
+import { makeWindow, windowSum, WINDOW_NAMES } from './window.ts';
 
 describe('makeWindow', () => {
   it('rectangular is all ones', () => {

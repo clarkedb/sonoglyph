@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import type { PlaygroundController } from './controller.js';
+import type { PlaygroundController } from './controller.ts';
 
 export const ControllerContext = createContext<PlaygroundController | null>(null);
 

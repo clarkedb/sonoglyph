@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Fft } from './fft.js';
-import { sine, whiteNoise } from './generate.js';
+import { Fft } from './fft.ts';
+import { sine, whiteNoise } from './generate.ts';
 
 /** Naive O(N²) DFT used as the ground truth. */
 function naiveDft(signal: Float32Array): { re: number[]; im: number[] } {

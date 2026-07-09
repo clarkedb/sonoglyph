@@ -8,9 +8,9 @@ import type {
   SpectrumData,
 } from '@sonoglyph/core';
 import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SAMPLES, STREAM_SPECTRUM } from '@sonoglyph/core';
-import { Fft } from './fft.js';
-import { detectPeaks } from './peaks.js';
-import { makeWindow, windowSum } from './window.js';
+import { Fft } from './fft.ts';
+import { detectPeaks } from './peaks.ts';
+import { makeWindow, windowSum } from './window.ts';
 
 export const SPECTRUM_VERSION = 1;
 export const PEAKS_VERSION = 1;

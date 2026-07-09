@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RingBuffer } from './ring-buffer.js';
+import { RingBuffer } from './ring-buffer.ts';
 
 const f32 = (...values: number[]) => new Float32Array(values);
 

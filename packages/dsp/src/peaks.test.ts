@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Fft } from './fft.js';
-import { sine, tones } from './generate.js';
-import { detectPeaks } from './peaks.js';
-import { makeWindow, windowSum } from './window.js';
+import { Fft } from './fft.ts';
+import { sine, tones } from './generate.ts';
+import { detectPeaks } from './peaks.ts';
+import { makeWindow, windowSum } from './window.ts';
 
 const SAMPLE_RATE = 48_000;
 const N = 4096;

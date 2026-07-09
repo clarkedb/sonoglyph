@@ -4,10 +4,10 @@ import { STREAM_PEAKS } from '@sonoglyph/core';
 import { mix, Pipeline, silence, TsDspEngine, whiteNoise } from '@sonoglyph/dsp';
 import type { ToneStep } from '@sonoglyph/testing';
 import { decode, fanRumble, symbols, toneSequence } from '@sonoglyph/testing';
-import type { DtmfPayload } from './dtmf.js';
-import { DtmfRecognizer } from './dtmf.js';
-import type { DtmfKey } from './frequencies.js';
-import { frequenciesFor } from './frequencies.js';
+import type { DtmfPayload } from './dtmf.ts';
+import { DtmfRecognizer } from './dtmf.ts';
+import type { DtmfKey } from './frequencies.ts';
+import { frequenciesFor } from './frequencies.ts';
 
 const SAMPLE_RATE = 48_000;
 

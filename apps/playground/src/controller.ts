@@ -20,7 +20,10 @@ import {
 } from '@sonoglyph/dsp';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
+import type { MorseTranscript } from '@sonoglyph/plugin-morse';
 import { MorseRecognizer, MorseTextTranslator, morseTiming } from '@sonoglyph/plugin-morse';
+
+const EMPTY_TRANSCRIPT: MorseTranscript = { text: '', letters: [] };
 
 export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer';
 
@@ -72,8 +75,9 @@ export class PlaygroundController {
     envelope?: FeatureFrame<EnvelopeData>;
   } = {};
   glyphs: Glyph[] = [];
-  /** The Morse translator's running transcript (the Meaning layer). */
-  morseText = '';
+  /** The Morse translator's running decode (the Meaning layer): assembled
+   * text plus the letters behind it, each with the code it came from. */
+  morseTranscript: MorseTranscript = EMPTY_TRANSCRIPT;
   status: PlaygroundStatus = {
     mode: 'idle',
     sampleRate: DEFAULT_ENGINE_OPTIONS.sampleRate,
@@ -88,6 +92,12 @@ export class PlaygroundController {
   private readonly listeners = new Set<() => void>();
 
   constructor() {
+    // The Meaning layer publishes a new transcript after each letter (and
+    // on flush/reset); mirror it into React-visible state.
+    this.morseTranslator.onMeaning((transcript) => {
+      this.morseTranscript = transcript;
+      this.notify();
+    });
     this.pipeline = this.buildPipeline();
   }
 
@@ -123,6 +133,11 @@ export class PlaygroundController {
     this.fftRecognizer.reset();
     this.goertzelRecognizer.reset();
     this.morseRecognizer.reset();
+    // A new engine restarts stream time; flush the translator so it closes
+    // any pending letter and doesn't measure the next element's gap against
+    // the old time base. The decoded transcript so far is kept, matching
+    // how glyph history survives a rebuild.
+    this.morseTranslator.flush();
     const recognizers = this.activeRecognizers();
     // Compute the streams the panels always need plus whatever the active
     // recognizers declare (the Goertzel one wants raw `samples`).
@@ -147,10 +162,10 @@ export class PlaygroundController {
     });
     this.glyphUnsub = pipeline.onGlyph((glyph) => {
       this.glyphs = [...this.glyphs, glyph];
-      // The Meaning layer: the translator reads the glyph stream and
-      // keeps the transcript; it ignores glyphs it doesn't understand.
+      // Feed the Meaning layer: the translator reads the element glyphs and
+      // assembles letters/words, ignoring glyphs it doesn't understand.
+      // (It publishes via onMeaning, wired in the constructor.)
       this.morseTranslator.push(glyph);
-      this.morseText = this.morseTranslator.value;
       this.notify();
     });
     this.status.sampleRate = this.engineOptions.sampleRate;
@@ -299,6 +314,9 @@ export class PlaygroundController {
     padded.set(samples, lead);
     this.bufferSource = new BufferSource(padded, sampleRate);
     this.bufferSource.onEnded(() => {
+      // End of input: close the Morse transcript's final letter, which no
+      // following element can (the transmission is over).
+      this.morseTranslator.flush();
       if (this.status.mode === 'buffer') {
         this.status.mode = 'idle';
         this.notify();
@@ -354,8 +372,8 @@ export class PlaygroundController {
 
   clearGlyphs(): void {
     this.glyphs = [];
+    // reset() republishes an empty transcript via onMeaning.
     this.morseTranslator.reset();
-    this.morseText = '';
     this.notify();
   }
 }

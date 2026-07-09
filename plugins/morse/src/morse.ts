@@ -8,7 +8,6 @@ import type {
 } from '@sonoglyph/core';
 import { STREAM_ENVELOPE } from '@sonoglyph/core';
 import { defineRecognizer } from '@sonoglyph/plugin-sdk';
-import { charFor } from './code.js';
 
 export interface MorseOptions {
   /**
@@ -33,21 +32,17 @@ export const DEFAULT_MORSE_OPTIONS: MorseOptions = {
   adaptive: true,
 };
 
-/** Payload of element glyphs ("." and "-"). */
+/**
+ * Payload of every Morse glyph. A glyph here is one keyed element — a dot
+ * or a dash — and nothing more: assembling elements into letters and words
+ * is meaning, and lives in `MorseTextTranslator`, not in the glyph stream.
+ */
 export interface MorseElementPayload {
-  /** Element length in (estimated) timing units. */
+  /** Element length in (estimated) timing units — ~1 for a dot, ~3 for a
+   * dash. Divide `duration` by this to recover the unit length the
+   * recognizer was using, which the translator needs to size the gaps
+   * between elements. */
   units: number;
-}
-
-/** Payload of letter glyphs ("A", "7", "?" for unknown codes). */
-export interface MorseLetterPayload {
-  /** The dot/dash sequence the letter was decoded from. */
-  code: string;
-  /**
-   * Silence before this letter, in timing units — ~3 between letters,
-   * ~7 between words. Translators read word boundaries from this.
-   */
-  gapUnits: number;
 }
 
 // Frozen: shared by every instance and by the inner element machine.
@@ -64,13 +59,18 @@ const METADATA: PluginMetadata = Object.freeze({
  * the plugin that proves feature streams aren't DTMF-shaped: it never
  * sees a spectrum, only "how loud is the signal right now".
  *
- * Two layers of glyphs come out. Elements ("." / "-") are the plugin-SDK
- * segmentation machine wearing a different classifier: `rms ≥ threshold`
- * is the whole per-frame judgment, and `finalize` names the run by its
- * duration. Letters ("K", "7", "?" when the code is unknown) are
- * aggregated here on top: a gap of ~3 units closes the letter — which is
- * why this is the segmentation stress test; in Morse the *silences* carry
- * as much structure as the tones.
+ * It emits exactly one kind of glyph: an element, "." or "-", named by its
+ * duration. That is the whole job of the Glyphs stage here. The per-frame
+ * judgment (`rms ≥ threshold`) and the segmentation (key-down runs, gap
+ * debouncing, dot-vs-dash by duration) are the plugin-SDK machine; the
+ * recognizer only adds speed adaptation, since what counts as "long" drifts
+ * with the sender.
+ *
+ * Letters and words are NOT glyphs — a dot is a recognized signal, but an
+ * "S" is three dots *interpreted*, which is meaning. That assembly lives in
+ * `MorseTextTranslator` (the Meaning layer), which reads the silences
+ * between these element glyphs. Keeping it out of here is what makes the
+ * glyph timeline a clean stream of dots and dashes.
  */
 export class MorseRecognizer implements RecognizerPlugin {
   readonly metadata = METADATA;
@@ -81,22 +81,6 @@ export class MorseRecognizer implements RecognizerPlugin {
 
   /** Current estimate of the sender's unit (dot) length, in seconds. */
   private unitSec: number;
-  /** Elements of the letter being accumulated. */
-  private pendingCode = '';
-  private letterStart = 0;
-  /** The gap before the current letter, measured in the units in force
-   * when the letter began — the letter's own elements adapt the unit
-   * estimate, and the gap physically predates them. */
-  private letterGapUnits = Number.POSITIVE_INFINITY;
-  private sumConfidence = 0;
-  /** Stream time when the last element ended. */
-  private lastElementEnd = 0;
-  /** Stream time of the last frame with the key audibly down. Element
-   * glyphs only emit after their trailing gap, so this is what stops a
-   * letter from closing while its next element is still sounding. */
-  private lastKeyDown = 0;
-  /** Stream time when the previous letter ended (for gap payloads). */
-  private prevLetterEnd: number | null = null;
 
   constructor(options: Partial<MorseOptions> = {}) {
     this.options = { ...DEFAULT_MORSE_OPTIONS, ...options };
@@ -131,34 +115,15 @@ export class MorseRecognizer implements RecognizerPlugin {
       },
     });
 
+    // Forward every element glyph straight through — no accumulation.
     this.elements.onGlyph((glyph) => {
-      if (this.pendingCode === '') {
-        this.letterStart = glyph.start;
-        this.letterGapUnits =
-          this.prevLetterEnd === null
-            ? Number.POSITIVE_INFINITY
-            : (glyph.start - this.prevLetterEnd) / this.unitSec;
-        this.sumConfidence = 0;
-      }
-      this.pendingCode += glyph.symbol;
-      this.sumConfidence += glyph.confidence;
-      this.lastElementEnd = glyph.start + glyph.duration;
-      this.emit(glyph);
+      for (const cb of this.listeners) cb(glyph);
     });
   }
 
   process(frame: FeatureFrame): void {
     if (frame.stream !== STREAM_ENVELOPE) return;
     this.elements.process(frame);
-    if ((frame.data as EnvelopeData).rms >= this.options.onThreshold) {
-      this.lastKeyDown = frame.time;
-    }
-    // A letter closes when the silence since its last element clearly
-    // exceeds the 1-unit intra-letter gap (the true letter gap is 3).
-    const lastSound = Math.max(this.lastElementEnd, this.lastKeyDown);
-    if (this.pendingCode !== '' && frame.time - lastSound >= 2 * this.unitSec) {
-      this.closeLetter();
-    }
   }
 
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe {
@@ -168,30 +133,7 @@ export class MorseRecognizer implements RecognizerPlugin {
 
   reset(): void {
     this.elements.reset();
-    this.pendingCode = '';
-    this.lastElementEnd = 0;
-    this.lastKeyDown = 0;
-    this.prevLetterEnd = null;
-    this.letterGapUnits = Number.POSITIVE_INFINITY;
     this.unitSec = this.options.unitMs / 1000;
-  }
-
-  private closeLetter(): void {
-    const code = this.pendingCode;
-    const gapUnits = this.letterGapUnits;
-    const glyph: Glyph<MorseLetterPayload> = {
-      // "?" keeps unknown codes visible instead of silently dropped —
-      // mis-keyed letters are where decoding gets interesting.
-      symbol: charFor(code) ?? '?',
-      pluginId: this.metadata.id,
-      start: this.letterStart,
-      duration: this.lastElementEnd - this.letterStart,
-      confidence: this.sumConfidence / code.length,
-      payload: { code, gapUnits },
-    };
-    this.prevLetterEnd = this.lastElementEnd;
-    this.pendingCode = '';
-    this.emit(glyph);
   }
 
   /**
@@ -207,9 +149,5 @@ export class MorseRecognizer implements RecognizerPlugin {
     // must not retune the clock so far that real keying stops parsing.
     const seed = this.options.unitMs / 1000;
     this.unitSec = Math.min(2 * seed, Math.max(0.5 * seed, eased));
-  }
-
-  private emit(glyph: Glyph): void {
-    for (const cb of this.listeners) cb(glyph);
   }
 }

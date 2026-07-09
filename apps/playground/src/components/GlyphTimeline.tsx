@@ -1,6 +1,6 @@
 import type { Glyph } from '@sonoglyph/core';
 import type { DtmfPayload, GoertzelDtmfPayload } from '@sonoglyph/plugin-dtmf';
-import type { MorseElementPayload, MorseLetterPayload } from '@sonoglyph/plugin-morse';
+import type { MorseElementPayload } from '@sonoglyph/plugin-morse';
 import type { DecoderChoice } from '../controller.js';
 import { useController, useControllerTick } from '../hooks.js';
 import { Panel } from './Panel.js';
@@ -31,17 +31,10 @@ const CELL = 'border-b border-edge-soft py-1 pr-2';
 /** The payload cells, for whichever payload shape the glyph carries. */
 function payloadText(glyph: Glyph): { pair: string; detail: string } {
   const payload = glyph.payload as
-    | Partial<DtmfPayload & GoertzelDtmfPayload & MorseElementPayload & MorseLetterPayload>
-    | undefined;
+    Partial<DtmfPayload & GoertzelDtmfPayload & MorseElementPayload> | undefined;
   if (!payload) return { pair: '—', detail: '—' };
-  if (payload.code !== undefined) {
-    return {
-      pair: `code ${payload.code}`,
-      detail: Number.isFinite(payload.gapUnits)
-        ? `${payload.gapUnits!.toFixed(1)} units of silence before`
-        : '—',
-    };
-  }
+  // Morse elements: a dot or dash, measured in timing units. (Letters and
+  // words are meaning, not glyphs — see the Morse panel.)
   if (payload.units !== undefined) {
     return { pair: '—', detail: `${payload.units.toFixed(1)} units long` };
   }

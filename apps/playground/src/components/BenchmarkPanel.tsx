@@ -112,7 +112,7 @@ export function BenchmarkPanel() {
 
   return (
     <Panel
-      title="TS vs WASM"
+      title="Goertzel: TS vs WASM"
       explainer={EXPLAINER}
       className="col-span-full"
       controls={

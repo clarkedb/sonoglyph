@@ -26,3 +26,41 @@ export declare function goertzelPower(
   frequencyHz: number,
   sampleRate: number,
 ): number;
+
+export type WasmWindow = 'rectangular' | 'hann' | 'hamming' | 'blackman';
+export type WasmStream = 'spectrum' | 'peaks' | 'envelope' | 'samples';
+
+export interface WasmEngineOptions {
+  sampleRate?: number;
+  windowSize?: number;
+  hopSize?: number;
+  window?: WasmWindow;
+  streams?: WasmStream[];
+  /** Max samples per `push()`; longer signals must be chunked by the caller. */
+  inputCapacity?: number;
+}
+
+/** `frameStream()` codes. */
+export declare const STREAM: {
+  readonly spectrum: 0;
+  readonly peaks: 1;
+  readonly envelope: 2;
+  readonly samples: 3;
+};
+
+/** The WASM streaming engine. `initDspWasm()` must have resolved first. */
+export declare class WasmDspEngine {
+  constructor(options?: WasmEngineOptions);
+  /** Max samples accepted by a single `push()`. */
+  get inputCapacity(): number;
+  /** Process up to `inputCapacity` samples; returns the frame count. */
+  push(samples: Float32Array): number;
+  reset(): void;
+  frameCount(): number;
+  frameStream(i: number): number;
+  spectrumMagnitudes(i: number): Float32Array;
+  envelopeRms(i: number): number;
+  envelopePeak(i: number): number;
+  /** Release the underlying WASM object. */
+  free(): void;
+}

@@ -2,7 +2,7 @@
 
 The plan is organized into phases, each ending at something demonstrable. Phases replace the original milestone framework; items within a phase are roughly ordered but not sacred. Architecture and rationale live in [architecture.md](./architecture.md).
 
-**Status: Phase 1 built (2026-07-08).** All five workspace units exist; DTMF decodes end-to-end (verified in headless Chrome for the keypad/tone/WAV paths, including the full 16-key sequence, repeated digits, and rejection cases). Remaining before calling Phase 1 done: a human live-microphone check (hold a phone dialer up to the mic) and turning on branch protection once CI has run on GitHub.
+**Status: Phase 2 built (2026-07-08).** Phase 1: all five workspace units exist; DTMF decodes end-to-end (verified in headless Chrome for the keypad/tone/WAV paths); still owed a human live-microphone check and branch protection. Phase 2: plugin SDK (`defineRecognizer` segmentation machine), testing module (signal builders + decode harness), Goertzel DTMF recognizer with the live comparison toggle (raw `samples` stream, noise-floor tracking), Morse plugin off the envelope stream with the first `Translator` (Meaning layer), plugin author walkthrough (`docs/plugins.md`, CI-enforced), and npm publishing (Changesets + release workflow; first publish awaits the `NPM_TOKEN` secret). Storage abstraction correctly stayed deferred — nothing needed it.
 
 ## Phase 1 — Vertical slice
 

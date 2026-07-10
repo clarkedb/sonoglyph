@@ -2,15 +2,41 @@
   "name": "@sonoglyph/dsp",
   "version": "0.1.0",
   "description": "Sonoglyph reference DSP engine: windowing, FFT, spectrum, peaks, envelope",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clarkedb/sonoglyph.git",
+    "directory": "packages/dsp"
+  },
+  "sideEffects": false,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!dist/.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "golden:bless": "node scripts/bless-golden.ts"
+    "golden:bless": "node scripts/bless-golden.ts",
+    "build": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
     "@sonoglyph/core": "workspace:*"

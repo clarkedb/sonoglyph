@@ -2,6 +2,7 @@
   "name": "@sonoglyph/eridian",
   "version": "0.1.0",
   "description": "The Eridian language: phonology, lexicon, grammar, and text-to-audio synthesis",
+  "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

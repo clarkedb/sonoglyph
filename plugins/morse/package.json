@@ -2,14 +2,40 @@
   "name": "@sonoglyph/plugin-morse",
   "version": "0.1.0",
   "description": "Morse recognizer plugin for Sonoglyph — time-domain recognition off the envelope stream, letters and text via the Meaning layer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clarkedb/sonoglyph.git",
+    "directory": "plugins/morse"
+  },
+  "sideEffects": false,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!dist/.tsbuildinfo"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -b tsconfig.build.json"
   },
   "dependencies": {
     "@sonoglyph/core": "workspace:*",

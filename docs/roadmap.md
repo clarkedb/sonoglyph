@@ -126,10 +126,28 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 **Goal:** the standalone learning resource, grown from battle-tested playground panels rather than written from scratch.
 
-- Next.js site (`website/`): project introduction, hosted playground, developer docs.
-- **Learn** section — articles promoted from the playground's embedded explainers, each with its interactive component: sound & sampling, Nyquist, FFT & windowing (the resolution tradeoff), harmonics, peak detection, feature extraction, "building a recognizer" end-to-end walkthrough, DTMF history & why it works, FFT vs. Goertzel.
-- Hosted examples: DTMF decoder, Morse decoder, tone playground.
-- Deployment via CI (see below).
+Two surfaces, one component library. The panels the playground grew are
+extracted to `@sonoglyph/react` (done, PR #50) so both consumers render one
+source of truth; the token contract (`@sonoglyph/react/theme.css`) lets each
+keep its own look until they converge.
+
+- **Next.js site (`website/`) at `sonoglyph.dev`**: the teaching/marketing
+  surface — project introduction, the **Learn** section, focused hosted
+  examples, developer docs. Design language: the dark instrument-manual
+  system (see `website/PRODUCT.md`).
+- **Full playground (`apps/playground`, Vite) at `play.sonoglyph.dev`**: the
+  kitchen-sink interactive tool, deployed separately (its own Vercel project)
+  rather than ported into Next — no `AudioWorklet`/controller migration, and
+  the site never needed the whole app inline. The site's "open the playground"
+  CTA links here.
+- **Learn** section (in the site) — articles promoted from the playground's
+  embedded explainers, each embedding its `@sonoglyph/react` component
+  directly: sound & sampling, Nyquist, FFT & windowing (the resolution
+  tradeoff), harmonics, peak detection, feature extraction, "building a
+  recognizer" end-to-end, DTMF history & why it works, FFT vs. Goertzel.
+- **Hosted examples** (in the site, built from `@sonoglyph/react`): focused
+  DTMF decoder, Morse decoder, tone playground — smaller than the full tool.
+- Deployment via CI / Vercel (see below).
 
 ## Beyond
 
@@ -161,4 +179,10 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 
 ### Phase 4 — deployment
 
-- `deploy.yml` — on push to `main`: build website + playground → deploy (Vercel or GitHub Pages; decide when the website exists). PR preview deployments for the playground once it's the primary review surface.
+- Two Vercel projects on this repo, both with PR preview deployments:
+  - `sonoglyph.dev` — the Next.js site (root `website/`).
+  - `play.sonoglyph.dev` — the Vite playground (root `apps/playground`,
+    build `pnpm --filter @sonoglyph/playground build`, output `dist/`).
+    Vercel's Git integration handles build-on-push and previews, so no
+    `deploy.yml` is needed unless a target outside Vercel (e.g. GitHub Pages)
+    is later chosen.

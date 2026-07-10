@@ -5,3 +5,12 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[dependencies]
+# The optimized, swappable backend. Compiles to wasm32; a SIMD build
+# (target-feature=+simd128, wired via the workspace .cargo/config.toml) is
+# where the browser speedup comes from. rustfft's `wasm_simd` feature is a
+# no-op on non-wasm32 targets, so it's safe to enable unconditionally rather
+# than only for the wasm32 target — see the `FftPlannerWasmSimd` use in
+# lib.rs, which is the other half of actually engaging it.
+rustfft = { version = "6", features = ["wasm_simd"] }

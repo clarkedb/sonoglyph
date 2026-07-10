@@ -115,11 +115,12 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 **Plan:**
 
-- `crates/sonoglyph-dsp` implementing the same `DspEngine` contract: done — the spectral primitives and the streaming engine (`DspEngine`) are ported and cross-validated. `crates/sonoglyph-fft` is the FFT abstraction — a bit-exact hand-rolled radix-2 backend first (to hold the tight golden contract), with rustfft as a swappable backend validated against it later.
-- wasm-bindgen + WASM build via wasm-pack into a `@sonoglyph/dsp-wasm` pnpm package (done for the primitives, consumed by the playground benchmark panel); still to come: exporting the streaming engine across the boundary with a zero-copy path (a view into pre-allocated WASM memory) for the hot loop rather than the per-call `Float32Array` copy the primitives use, then wiring it into the playground as a selectable (eventually default) engine.
+- `crates/sonoglyph-dsp` implementing the same `DspEngine` contract: done — the spectral primitives and the streaming engine (`DspEngine`) are ported and cross-validated. `crates/sonoglyph-fft` is the FFT abstraction with two backends: the bit-exact hand-rolled radix-2 (holds the tight golden contract) and **rustfft** (numerically equivalent, ~2.8× faster on the full engine natively), selectable per engine and validated against the reference.
+- wasm-bindgen + WASM build via wasm-pack into a `@sonoglyph/dsp-wasm` pnpm package — done for the primitives and the **streaming engine**, which crosses the boundary with a zero-copy input path (a reusable buffer in WASM memory rather than a per-call `Float32Array` copy) and is cross-validated against the TS engine live in the playground's engine benchmark. The wasm32 build now opts into WASM SIMD (`-C target-feature=+simd128` via `.cargo/config.toml`, plus rustfft's `wasm_simd` planner — see [issue #65](https://github.com/clarkedb/sonoglyph/issues/65)), which took the WASM engine from ~1.27× to ~1.3-1.4× faster than V8's JIT in the browser. That's a smaller gain than the ~2.8-3.8× native criterion numbers because the panel times the whole engine (not just the FFT) and rustfft's WASM SIMD butterflies are less complete than its native AVX/SSE paths. Still open (not committed — see [issue #60](https://github.com/clarkedb/sonoglyph/issues/60)): whether to run the live recognition pipeline through the WASM engine and make it the default.
 - **The TypeScript engine is kept**, permanently, as the readable reference implementation. Shared golden test vectors (`packages/dsp/src/golden`) cross-validate the two engines — the strongest correctness story DSP code can have.
 - Playground benchmark panel: TS vs. WASM side by side, as an educational feature ("this is why WASM exists" — and, honestly, why it sometimes doesn't for small boundary-crossing probes). ✓ landed.
-- Native `cargo test` + proptest + criterion benches; thin WASM-boundary smoke tests in the browser CI job.
+- Native `cargo test` + proptest (engine invariants: frame count/times, any-split chunking-invariance, reset) + criterion benches (radix-2 vs rustfft) — landed; thin WASM-boundary smoke tests in the browser CI job.
+- **Performance regression gate** (`bench.yml`, [issue #66](https://github.com/clarkedb/sonoglyph/issues/66)) — landed. All three engines are benched headlessly (Rust via criterion, TS and WASM via `vitest bench`) and compared against committed `bench-baselines/` snapshots; a PR fails when any benchmark is >15% slower than baseline. Because performance baselines are hardware-specific, they're CI-measured (the gate comment embeds the exact values to re-bless from); `pnpm bench:bless` regenerates the format locally. Override a reviewed slowdown with the `tolerable regression` label. Results post as a single PR comment.
 - WASM becomes the default engine in the browser; TS remains the fallback and the teaching text.
 
 ## Phase 4 — Education & website
@@ -128,8 +129,12 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 Two surfaces, one component library. The panels the playground grew are
 extracted to `@sonoglyph/react` (done, PR #50) so both consumers render one
-source of truth; the token contract (`@sonoglyph/react/theme.css`) lets each
-keep its own look until they converge.
+source of truth, styled through the token contract (`@sonoglyph/react/theme.css`).
+The playground has converged onto the website's dark "instrument at night"
+palette (void + phosphor amber, Barlow/Barlow Condensed/Fragment Mono,
+matching favicon) — the website itself doesn't consume `@sonoglyph/react`
+yet, so the printed (light) theme and a runtime toggle in the playground
+remain deferred until that embed happens.
 
 - **Next.js site (`website/`) at `sonoglyph.dev`**: the teaching/marketing
   surface — project introduction, the **Learn** section, focused hosted
@@ -182,7 +187,13 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 - Two Vercel projects on this repo, both with PR preview deployments:
   - `sonoglyph.dev` — the Next.js site (root `website/`).
   - `play.sonoglyph.dev` — the Vite playground (root `apps/playground`,
-    build `pnpm --filter @sonoglyph/playground build`, output `dist/`).
-    Vercel's Git integration handles build-on-push and previews, so no
-    `deploy.yml` is needed unless a target outside Vercel (e.g. GitHub Pages)
+    output `dist/`). Build command is overridden via
+    `apps/playground/vercel.json` to `cd ../.. && pnpm build:ci` — the
+    Root Directory is `apps/playground`, but `build:ci` needs the whole
+    workspace to provision Rust + wasm-pack and build `@sonoglyph/dsp-wasm`
+    before the playground itself, so the plain per-package build command
+    isn't enough once the WASM engine is part of the deploy (see
+    `packages/dsp-wasm/README.md`). Vercel's Git integration handles
+    build-on-push and previews, so no `deploy.yml` is needed unless a
+    target outside Vercel (e.g. GitHub Pages)
     is later chosen.

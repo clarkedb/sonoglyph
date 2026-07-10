@@ -1,0 +1,12 @@
+{
+  "engine": "ts",
+  "metric": "median",
+  "unit": "ms",
+  "benchmarks": {
+    "fft/magnitudes/512": 0.0189,
+    "fft/magnitudes/2048": 0.0817,
+    "fft/magnitudes/8192": 0.372,
+    "engine/push-1s/ts": 8.803,
+    "goertzel/power-2048": 0.00575
+  }
+}

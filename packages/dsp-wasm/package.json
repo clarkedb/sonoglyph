@@ -13,6 +13,8 @@
     }
   },
   "scripts": {
+    "build": "sh scripts/build.sh",
+    "build:ci": "sh scripts/build-ci.sh",
     "build:wasm": "wasm-pack build ../../crates/sonoglyph-dsp --target web --out-name sonoglyph_dsp --out-dir ../../packages/dsp-wasm/pkg",
     "typecheck:wasm": "tsc --noEmit"
   },

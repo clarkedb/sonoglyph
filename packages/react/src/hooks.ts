@@ -59,15 +59,15 @@ export interface VizPalette {
 /** Playground defaults — the fallback when CSS variables can't be read
  * (e.g. before styles load, or a server render). */
 const FALLBACK: VizPalette = {
-  axis: '#2d3748',
-  trace: '#4fd1c5',
-  guide: '#2a3344',
-  guideLabel: '#4a5568',
-  grid: '#1f2733',
-  spectrum: '#63b3ed',
-  peak: '#f6ad55',
-  crosshair: '#718096',
-  readout: '#e2e8f0',
+  axis: '#3f4757',
+  trace: '#d9a441',
+  guide: '#232a36',
+  guideLabel: '#7c8394',
+  grid: '#1b212b',
+  spectrum: '#a8823f',
+  peak: '#f2ddb0',
+  crosshair: '#7c8394',
+  readout: '#e4e7ee',
 };
 
 const VIZ_VARS: Record<keyof VizPalette, string> = {

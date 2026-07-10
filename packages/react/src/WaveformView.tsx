@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { scaleCanvas, useAnimationFrame, useVizPalette } from './hooks.ts';
 
-const DEFAULT_CLASS = 'block h-[140px] w-full rounded-[5px] bg-canvas';
+const DEFAULT_CLASS = 'block h-[140px] w-full rounded-sm bg-canvas';
 
 /**
  * Live time-domain waveform. Owns its canvas and animation loop; each frame

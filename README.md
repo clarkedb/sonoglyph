@@ -1,5 +1,8 @@
 # sonoglyph
 
+[![CI](https://github.com/clarkedb/sonoglyph/actions/workflows/ci.yml/badge.svg)](https://github.com/clarkedb/sonoglyph/actions/workflows/ci.yml)
+[![Bench](https://github.com/clarkedb/sonoglyph/actions/workflows/bench.yml/badge.svg)](https://github.com/clarkedb/sonoglyph/actions/workflows/bench.yml)
+
 beep boop beep = hello world?
 
 Sonoglyph is a browser-first, extensible signal recognition framework. It provides a reusable digital signal processing pipeline — microphone to spectrum to detected features — and a plugin architecture that turns those features into **glyphs**: symbolic representations of recognized signals. A DTMF `5`, a Morse dash, a musical chord, and a syllable of an alien language are all glyphs.

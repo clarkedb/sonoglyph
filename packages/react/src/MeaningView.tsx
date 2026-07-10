@@ -67,10 +67,10 @@ function LetterChip({ letter }: { letter: MeaningLetter }) {
   return (
     <span
       title={`${unknown ? 'unknown' : letter.char} · ${letter.code}`}
-      className={`flex flex-col items-center rounded-[5px] border px-2 py-1 leading-none ${
+      className={`flex flex-col items-center rounded-sm border px-2 py-1 leading-none ${
         unknown
           ? 'border-danger bg-danger/10 text-danger'
-          : 'border-accent bg-accent-dim text-accent'
+          : 'glyph-glow border-accent bg-accent-dim text-accent'
       }`}
     >
       <span className="text-[17px] font-bold">{letter.char}</span>

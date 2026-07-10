@@ -10,10 +10,16 @@
 //! `f32`, the f32 rounding absorbs the last-ULP differences between platforms'
 //! and languages' math libraries, so the results match regardless of host.
 //!
-//! A rustfft-backed [`Fft`] can be added later and validated against this
-//! reference with a numerical tolerance.
+//! [`RustFftBackend`] is the optimized backend, wrapping the `rustfft` crate.
+//! It is *not* bit-exact (different butterfly order and precision), so it is
+//! validated against [`RadixTwoFft`] with a numerical tolerance rather than the
+//! tight golden contract. Pick a backend with [`make_fft`].
 
 use std::f64::consts::PI;
+use std::sync::Arc;
+
+use rustfft::num_complex::Complex;
+use rustfft::FftPlanner;
 
 /// A real-signal FFT: samples in, magnitude spectrum out.
 pub trait Fft {
@@ -145,6 +151,92 @@ impl Fft for RadixTwoFft {
     }
 }
 
+/// The optimized backend: `rustfft`'s mixed-radix transform. Numerically
+/// equivalent to [`RadixTwoFft`] but not bit-identical.
+pub struct RustFftBackend {
+    size: usize,
+    fft: Arc<dyn rustfft::Fft<f32>>,
+}
+
+impl RustFftBackend {
+    /// # Panics
+    /// If `size` is not a power of two ≥ 2 (kept consistent with the reference,
+    /// though `rustfft` itself handles any length).
+    pub fn new(size: usize) -> Self {
+        assert!(
+            size >= 2 && (size & (size - 1)) == 0,
+            "FFT size must be a power of two >= 2, got {size}"
+        );
+        let fft = Self::plan(size);
+        Self { size, fft }
+    }
+
+    /// `FftPlanner` (the generic planner) never selects rustfft's WASM SIMD
+    /// butterflies — those only exist behind the separate
+    /// [`rustfft::FftPlannerWasmSimd`] type, so it has to be reached for
+    /// explicitly on wasm32. `::new()` fails if the binary wasn't built with
+    /// `target-feature=+simd128` (wired via the workspace's
+    /// `.cargo/config.toml`), in which case the generic planner is a scalar
+    /// fallback rather than a hard error.
+    #[cfg(target_arch = "wasm32")]
+    fn plan(size: usize) -> Arc<dyn rustfft::Fft<f32>> {
+        match rustfft::FftPlannerWasmSimd::<f32>::new() {
+            Ok(mut planner) => planner.plan_fft_forward(size),
+            Err(()) => FftPlanner::<f32>::new().plan_fft_forward(size),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn plan(size: usize) -> Arc<dyn rustfft::Fft<f32>> {
+        FftPlanner::<f32>::new().plan_fft_forward(size)
+    }
+}
+
+impl Fft for RustFftBackend {
+    fn size(&self) -> usize {
+        self.size
+    }
+
+    fn magnitudes(&self, signal: &[f32], norm: f64) -> Vec<f32> {
+        let n = self.size;
+        let mut buffer = vec![
+            Complex {
+                re: 0.0_f32,
+                im: 0.0_f32
+            };
+            n
+        ];
+        let copy = signal.len().min(n);
+        for (slot, &s) in buffer.iter_mut().zip(&signal[..copy]) {
+            slot.re = s;
+        }
+        self.fft.process(&mut buffer);
+
+        let bins = n / 2 + 1;
+        buffer[..bins]
+            .iter()
+            .map(|c| ((c.re as f64).hypot(c.im as f64) / norm) as f32)
+            .collect()
+    }
+}
+
+/// Which [`Fft`] backend to build.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum FftBackend {
+    /// The bit-exact reference (holds the golden contract).
+    RadixTwo,
+    /// The optimized `rustfft` backend (numerically equivalent, faster).
+    RustFft,
+}
+
+/// Build the chosen [`Fft`] backend for a transform of `size`.
+pub fn make_fft(backend: FftBackend, size: usize) -> Box<dyn Fft> {
+    match backend {
+        FftBackend::RadixTwo => Box::new(RadixTwoFft::new(size)),
+        FftBackend::RustFft => Box::new(RustFftBackend::new(size)),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,6 +245,28 @@ mod tests {
     #[should_panic(expected = "power of two")]
     fn rejects_non_power_of_two() {
         RadixTwoFft::new(1000);
+    }
+
+    #[test]
+    fn rustfft_backend_matches_the_reference() {
+        // The two backends must agree numerically (looser than the bit-exact
+        // golden tolerance — different algorithm, different rounding).
+        let n = 512;
+        let signal: Vec<f32> = (0..n)
+            .map(|i| {
+                let t = i as f64;
+                (0.7 * (2.0 * PI * 5.0 * t / n as f64).sin()
+                    + 0.3 * (2.0 * PI * 60.0 * t / n as f64).sin()) as f32
+            })
+            .collect();
+        let reference = RadixTwoFft::new(n).magnitudes(&signal, 1.0);
+        let optimized = RustFftBackend::new(n).magnitudes(&signal, 1.0);
+        for (a, b) in reference.iter().zip(&optimized) {
+            assert!(
+                (*a as f64 - *b as f64).abs() < 1e-3,
+                "reference {a}, rustfft {b}"
+            );
+        }
     }
 
     #[test]

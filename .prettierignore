@@ -9,3 +9,9 @@ website/next-env.d.ts
 packages/dsp/src/golden/golden.json
 # wasm-pack output — generated.
 packages/dsp-wasm/pkg/
+# DSP benchmark baselines: written by `pnpm bench:bless`; the collectors own the format.
+bench-baselines/*.json
+# DSP benchmark gate run artifacts (generated at the repo root during CI).
+bench-results/
+bench-report.md
+current-*.json

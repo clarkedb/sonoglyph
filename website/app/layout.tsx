@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Barlow, Barlow_Condensed, Fragment_Mono } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { ThemeToggle } from './theme-toggle';
-import { REPO_URL } from './site';
+import { REPO_URL, SITE_URL } from './site';
 
 /* Voice: mid-century technical documentation. Barlow (road-signage grotesque
  * lineage) carries body and, condensed, the flight-plan display; Fragment
@@ -39,7 +40,7 @@ const themeInit = `(function () {
 })();`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sonoglyph.dev'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'Sonoglyph — watch sound become symbols',
     template: '%s · Sonoglyph',
@@ -52,6 +53,11 @@ export const metadata: Metadata = {
     url: '/',
     siteName: 'Sonoglyph',
     type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Sonoglyph',
+    description: 'Watch sound become symbols — a browser-first signal recognition framework.',
   },
 };
 
@@ -107,6 +113,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </span>
           </div>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

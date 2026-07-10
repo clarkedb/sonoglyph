@@ -1,27 +1,29 @@
-# Rust lives in its own workflow with path filters so TS-only changes don't pay
-# the Rust toolchain cost, and Rust-only changes don't spin up the Node
-# pipeline. rustup is preinstalled on the runner and provisions the exact
-# toolchain (channel + wasm32 target + components) from rust-toolchain.toml.
+# Rust lives in its own workflow so TS-only changes don't pay the Rust
+# toolchain cost, and Rust-only changes don't spin up the Node pipeline.
+# rustup is preinstalled on the runner and provisions the exact toolchain
+# (channel + wasm32 target + components) from rust-toolchain.toml.
+#
+# Path filtering happens inside the `changes` job (dorny/paths-filter), not on
+# the workflow's `on:` trigger. A trigger-level `paths:` filter means the
+# workflow — and every job's required-status-check context — never reports
+# *anything* for a PR that doesn't touch these paths, so a required check
+# gets stuck "Expected" forever and blocks merge. Filtering in-job instead
+# means the workflow always runs, `fmt`/`clippy`/`test`/`wasm`/`wasm-pkg` are
+# individually skipped when irrelevant, and the `rust` aggregate job (the one
+# branch protection requires) always executes via `if: always()` and reports
+# a real conclusion either way.
 #
 # The checks run as parallel jobs (fast fail-in-place, clear signal). `test`
 # runs the native cross-validation suite; `wasm` compile-checks the wasm32
 # target (fast, wasm-pack-independent); `wasm-pkg` builds @sonoglyph/dsp-wasm
-# with wasm-pack and cross-validates it against the TS reference. The `rust` job
-# aggregates them, so branch protection can require one check.
+# with wasm-pack and cross-validates it against the TS reference. The `rust`
+# job aggregates them, so branch protection can require one check.
 name: Rust
 
 on:
   push:
     branches: [main]
-    paths: &rust-paths
-      - 'crates/**'
-      - 'packages/dsp-wasm/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - '.github/workflows/rust.yml'
   pull_request:
-    paths: *rust-paths
 
 permissions:
   contents: read
@@ -31,8 +33,30 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'crates/**'
+              - 'packages/dsp-wasm/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - '.github/workflows/rust.yml'
+
   fmt:
     name: Format
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -44,6 +68,8 @@ jobs:
 
   clippy:
     name: Clippy
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -54,6 +80,8 @@ jobs:
 
   test:
     name: Test
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -64,6 +92,8 @@ jobs:
 
   wasm:
     name: WASM build
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -76,6 +106,8 @@ jobs:
   # TS reference. Needs both the Rust toolchain and Node/pnpm.
   wasm-pkg:
     name: WASM package
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -96,12 +128,25 @@ jobs:
       # (ci.yml's build job covers the stub path, where pkg/ is absent).
       - run: pnpm --filter @sonoglyph/playground build
 
-  # Aggregation gate: green only when every check above passed, so `main`
-  # branch protection can require just this one job.
+  # Aggregation gate: this is the context branch protection requires, so it
+  # must always report a conclusion. `if: always()` makes it run even when
+  # fmt/clippy/test/wasm/wasm-pkg were skipped (no Rust-relevant changes) —
+  # it only fails on an actual job failure, never on a skip.
   rust:
     name: Rust
-    needs: [fmt, clippy, test, wasm, wasm-pkg]
+    needs: [changes, fmt, clippy, test, wasm, wasm-pkg]
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "fmt, clippy, test, wasm build, and wasm package all passed"
+      - name: Gate
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "::error::one or more Rust jobs failed"
+            exit 1
+          fi
+          if [ "${{ needs.changes.outputs.rust }}" != "true" ]; then
+            echo "No Rust-relevant changes — fmt/clippy/test/wasm/wasm-pkg skipped."
+            exit 0
+          fi
+          echo "fmt, clippy, test, wasm build, and wasm package all passed"

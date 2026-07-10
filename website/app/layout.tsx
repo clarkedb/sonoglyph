@@ -76,6 +76,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </a>
             <nav className="flex items-center gap-5">
               <a
+                href="/learn"
+                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
+              >
+                learn
+              </a>
+              <a
                 href={REPO_URL}
                 className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
               >

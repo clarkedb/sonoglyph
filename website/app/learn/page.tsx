@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ARTICLES, EXAMPLES } from './articles';
+import { ARTICLES } from './articles';
 
 export const metadata: Metadata = {
   title: 'Learn',
@@ -56,33 +56,26 @@ export default function LearnIndex() {
 
       {/* Hosted examples — focused demos, routed under /examples. */}
       <section className="mt-16">
-        <h2 className="font-display text-2xl font-medium tracking-wide text-ink uppercase">
-          Interactive examples
-        </h2>
-        <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-ink-dim">
-          Small, single-purpose demos, each narrower than the full{' '}
-          <a
-            className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
-            href="https://play.sonoglyph.dev"
+        <a
+          href="/examples"
+          className="group flex items-baseline gap-4 rounded-sm border border-line bg-panel p-5 transition-colors hover:border-phosphor-dim"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="font-display text-2xl font-medium tracking-wide text-ink uppercase transition-colors group-hover:text-phosphor">
+              Interactive examples
+            </span>
+            <span className="mt-1.5 block max-w-[62ch] text-sm leading-relaxed text-ink-dim">
+              Small, single-purpose demos, each narrower than the full playground: the DTMF decoder,
+              the Morse decoder, the tone playground.
+            </span>
+          </span>
+          <span
+            aria-hidden
+            className="font-mono text-ink-dim transition-transform group-hover:translate-x-0.5 group-hover:text-phosphor"
           >
-            playground
-          </a>
-          .
-        </p>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          {EXAMPLES.map((example) => (
-            <a
-              key={example.slug}
-              href={`/examples/${example.slug}`}
-              className="group rounded-sm border border-line bg-panel p-4 transition-colors hover:border-phosphor-dim"
-            >
-              <h3 className="font-mono text-[13px] text-ink transition-colors group-hover:text-phosphor">
-                {example.title} <span aria-hidden>→</span>
-              </h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-dim">{example.blurb}</p>
-            </a>
-          ))}
-        </div>
+            →
+          </span>
+        </a>
       </section>
     </main>
   );

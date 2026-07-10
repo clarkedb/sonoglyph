@@ -108,6 +108,23 @@ export function DtmfDemo() {
     ]);
   }
 
+  // Physical keyboard drives the keypad, same as the playground's DTMF panel.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      // Ignore auto-repeat: holding a key should play one tone, not
+      // machine-gun press() for as long as it's down.
+      if (event.repeat) return;
+      if (event.target instanceof HTMLInputElement) return;
+      const key = event.key.toUpperCase();
+      if ((ALL_KEYS as string[]).includes(key)) {
+        press(key as DtmfKey);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function sendCustom() {
     const freqs = custom
       .split(',')
@@ -128,10 +145,11 @@ export function DtmfDemo() {
       meta="engine: @sonoglyph/dsp · recognizer: plugin-dtmf · 48 kHz"
       caption={
         <>
-          (1) each key synthesizes its row + column pair through the live pipeline · (2) FFT
-          magnitudes of the loudest frame; the guides are the eight DTMF frequencies · (3) glyphs
-          appear when a tone persists ≥40 ms and then ends. Try the tone input with 697 + 1209 — the
-          exact pair for key 1 — then detune one by 3% and watch the recognizer refuse it.
+          (1) each key synthesizes its row + column pair through the live pipeline — click, or type
+          it on your keyboard · (2) FFT magnitudes of the loudest frame; the guides are the eight
+          DTMF frequencies · (3) glyphs appear when a tone persists ≥40 ms and then ends. Try the
+          tone input with 697 + 1209 — the exact pair for key 1 — then detune one by 3% and watch
+          the recognizer refuse it.
         </>
       }
     >

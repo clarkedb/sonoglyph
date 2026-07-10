@@ -16,8 +16,19 @@ provisions the Rust toolchain — a dev machine, CI, or a hosting platform's
 build step — end up with the real WASM engine from the same `pnpm build` used
 everywhere else, with no separate manual step or platform-specific config.
 
-To build (or rebuild) just this package explicitly, bypassing the
-availability check:
+For a deploy environment that doesn't provision Rust itself (a hosting
+platform's default Node build image, for instance) and should still ship the
+real WASM engine rather than degrade to the stub, `pnpm build:ci` at the repo
+root runs `@sonoglyph/dsp-wasm`'s `build:ci` script first: it installs rustup
+(toolchain pinned by `rust-toolchain.toml`) and `wasm-pack` via their official
+installers when missing, then builds, then runs the normal `pnpm build`.
+Point that platform's build command at `pnpm build:ci` instead of `pnpm build`
+— nothing in either script is specific to any one platform. This is slower on
+a cold environment (installing the toolchain plus a from-scratch compile) so
+it's opt-in rather than the default.
+
+To build (or rebuild) just this package explicitly, bypassing both the
+availability check and the auto-install:
 
 ```sh
 pnpm --filter @sonoglyph/dsp-wasm build:wasm

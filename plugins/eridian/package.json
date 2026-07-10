@@ -1,0 +1,24 @@
+{
+  "name": "@sonoglyph/plugin-eridian",
+  "version": "0.1.0",
+  "description": "Eridian recognizer plugin for Sonoglyph — polyphonic recognition of the Project Hail Mary chord-language, chords to glyphs to sentences",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sonoglyph/core": "workspace:*",
+    "@sonoglyph/eridian": "workspace:*",
+    "@sonoglyph/plugin-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@sonoglyph/dsp": "workspace:*",
+    "@sonoglyph/testing": "workspace:*"
+  }
+}

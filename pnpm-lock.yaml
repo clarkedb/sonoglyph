@@ -172,6 +172,25 @@ importers:
         specifier: workspace:*
         version: link:../../packages/testing
 
+  plugins/eridian:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@sonoglyph/eridian':
+        specifier: workspace:*
+        version: link:../../packages/eridian
+      '@sonoglyph/plugin-sdk':
+        specifier: workspace:*
+        version: link:../../packages/plugin-sdk
+    devDependencies:
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../../packages/dsp
+      '@sonoglyph/testing':
+        specifier: workspace:*
+        version: link:../../packages/testing
+
   plugins/morse:
     dependencies:
       '@sonoglyph/core':

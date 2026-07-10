@@ -279,10 +279,24 @@ packages/eridian/
 ```
 
 `@sonoglyph/eridian` depends only on `@sonoglyph/dsp` (for the tone
-generators) — it has no opinion about recognition, storage, or UI. Those
-are separate, later items under the [Hail Mary
-milestone](https://github.com/clarkedb/sonoglyph/milestone/5): a
-recognizer plugin (`plugins/eridian`, consuming the `peaks` stream the way
-DTMF does, but matching chords instead of tone pairs), a teaching mode, and
-persistent dictionary storage. This document and package are the spec
-those build against, not a preview of them.
+generators) — it has no opinion about recognition, storage, or UI. It is
+the spec the rest of the [Hail Mary
+milestone](https://github.com/clarkedb/sonoglyph/milestone/5) builds
+against.
+
+The **recognizer plugin** (`@sonoglyph/plugin-eridian`) is the first of
+those to land: it consumes the `peaks` stream the way DTMF does — the
+language is synthesized from pure sine tones, so its chords show up as
+clean, unambiguous peaks — but matches this package's `chordFor` chords
+instead of DTMF tone pairs, and recovers the octave register besides. Its
+`EridianTranslator` reads the grouped chord glyphs back through the
+`byWord` lexicon and the `parseTokens` grammar above, so the round trip
+`renderSentence → recognize → translate` closes against this very spec. One
+consequence of the shared 2048-sample analysis window is worth naming here,
+because it is the language's own [timing](#timing) meeting the FFT's
+[resolution tradeoff](./architecture.md): at that window the recognizer
+resolves the full inventory in the neutral and raised registers (0, +1,
++2), but the subdued registers (−1, −2) shrink the closest scale-degree
+gaps below one FFT bin, and the one whole-tone particle (`PST`) blurs at
+register 0 while resolving an octave up. A **teaching mode** and
+**persistent dictionary storage** remain separate, later items.

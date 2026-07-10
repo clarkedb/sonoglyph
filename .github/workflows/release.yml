@@ -35,6 +35,12 @@ jobs:
         with:
           version: pnpm release:version
           publish: pnpm release:publish
+          # The Version Packages PR title becomes a squash-merge commit
+          # subject, so it must carry a conventional-commit prefix (the
+          # pr-title workflow enforces it). `commit` matches for the version
+          # branch's own commit.
+          title: 'chore: version packages'
+          commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

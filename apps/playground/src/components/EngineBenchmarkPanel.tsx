@@ -9,12 +9,15 @@ const EXPLAINER =
   'overlapping analysis windows — an FFT, peak detection, and an envelope per window. This is ' +
   'the compute-bound batch workload WASM is for: the samples cross the boundary once into a ' +
   'reusable buffer, then hundreds of FFTs run with no per-window JavaScript allocation, using ' +
-  'the optimized rustfft backend. It runs faster than V8’s JIT here — modestly, because this is ' +
-  'plain (non-SIMD) WASM; enabling WASM SIMD would widen the gap. And it stays correct: rustfft ' +
-  'is numerically equivalent to the bit-exact reference backend, which is itself pinned to the ' +
-  'golden vectors in CI — so the two engines agree to a hair, live in your browser. (Contrast ' +
-  'the single Goertzel probe above, which is about even — there the per-call boundary copy, not ' +
-  'compute, dominates.)';
+  'the optimized rustfft backend, built with WASM SIMD (target-feature=+simd128, plus rustfft’s ' +
+  '`wasm_simd` planner). It runs faster than V8’s JIT here — less dramatically than the ~2.8-3.8× ' +
+  'criterion shows natively, because this panel times the whole engine (windowing, FFT, peak ' +
+  'detection, envelope, and the JS↔WASM crossing) rather than the FFT alone, and rustfft’s WASM ' +
+  'SIMD butterflies cover fewer specialized sizes than its native AVX/SSE paths. And it stays ' +
+  'correct: rustfft is numerically equivalent to the bit-exact reference backend, which is itself ' +
+  'pinned to the golden vectors in CI — so the two engines agree to a hair, live in your browser. ' +
+  '(Contrast the single Goertzel probe above, which is about even — there the per-call boundary ' +
+  'copy, not compute, dominates.)';
 
 const SAMPLE_RATE = 48_000;
 const DURATION_SEC = 2;

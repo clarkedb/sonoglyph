@@ -28,6 +28,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      # Fails the PR that makes a package public without finishing its publish
+      # setup, rather than surfacing it only at release time.
+      - run: pnpm publish:check
 
   test:
     name: Test

@@ -14,3 +14,10 @@ Publish only ever runs through `pnpm publish` (the release workflow's
 source, and it is pnpm's `publishConfig` override that rewrites the
 entrypoints to `dist/` at pack time — a bare `npm publish` would ship a
 broken package.
+
+Publishing is opt-in. A package reaches npm only once it is deliberately
+set up for it: `publishConfig` entrypoint override, a `build` script, and
+a `tsconfig.build.json` (copy an existing package's). Until then keep it
+`"private": true` so it stays a workspace-internal package. `pnpm
+publish:check` enforces this — a public package missing that setup fails
+CI — so a newly scaffolded package is never published by accident.

@@ -2,6 +2,7 @@
   "name": "@sonoglyph/react",
   "version": "0.1.0",
   "description": "Sonoglyph presentational React components: signal-visualization panels wired to any data source",
+  "private": true,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

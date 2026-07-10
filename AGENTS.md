@@ -17,7 +17,10 @@ The Rust core (`crates/`, the WASM DSP engine — see the roadmap's Phase 3) is
 
 Any change that should reach npm needs a changeset (`pnpm changeset` —
 see `.changeset/README.md`); docs/CI/playground-only changes don't.
-Plugin authors start at [docs/plugins.md](docs/plugins.md).
+Publishing is opt-in: a new package stays `"private": true` until it has
+a `publishConfig`, a `build` script, and a `tsconfig.build.json`
+(`pnpm publish:check` enforces this in CI). Plugin authors start at
+[docs/plugins.md](docs/plugins.md).
 
 ## Skills
 

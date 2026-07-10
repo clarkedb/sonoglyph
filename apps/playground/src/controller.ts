@@ -447,14 +447,38 @@ export class PlaygroundController {
 
   async stop(): Promise<void> {
     this.teardownStraightKey();
-    await this.mic?.stop();
+    // Grab-and-null each source before awaiting: two overlapping stop()
+    // calls must not both hold the same reference and tear it down twice
+    // (a double AudioContext.close() surfaces a spurious InvalidStateError).
+    const mic = this.mic;
     this.mic = null;
-    await this.bufferSource?.stop();
+    const bufferSource = this.bufferSource;
     this.bufferSource = null;
+    await mic?.stop();
+    await bufferSource?.stop();
     if (this.status.mode !== 'idle') {
       this.status.mode = 'idle';
       this.notify();
     }
+  }
+
+  /**
+   * Release everything the controller owns: stop any live input and close
+   * the lazily created playback AudioContext (otherwise it lingers, and a
+   * Vite HMR reload strands the microphone with no handle to release it).
+   * Idempotent — the AudioContext close is guarded against a double call.
+   */
+  async dispose(): Promise<void> {
+    await this.stop();
+    this.frameUnsub?.();
+    this.glyphUnsub?.();
+    this.errorUnsub?.();
+    this.pipeline?.dispose();
+    this.pipeline = null;
+    const ctx = this.audioContext;
+    this.audioContext = null;
+    if (ctx && ctx.state !== 'closed') await ctx.close();
+    this.listeners.clear();
   }
 
   /**

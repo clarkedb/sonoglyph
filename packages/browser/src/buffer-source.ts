@@ -1,5 +1,15 @@
 import type { AudioSource } from '@sonoglyph/core';
 
+/**
+ * Ceiling on how many chunks' worth of samples a single tick may hand off.
+ * A backgrounded tab throttles the timer, then delivers one huge catch-up
+ * chunk on refocus — stuttering the main thread and distorting glyph
+ * timing. Capping per tick and letting later ticks drain the backlog keeps
+ * delivery smooth (the pipeline feed only trails wall-clock briefly; the
+ * audible playback runs off the AudioContext independently).
+ */
+const MAX_CATCHUP_CHUNKS = 4;
+
 export interface BufferSourceOptions {
   /** Deliver samples paced to real time (default) or all at once. */
   realtime?: boolean;
@@ -49,14 +59,18 @@ export class BufferSource implements AudioSource {
     }
 
     this.startedAt = Date.now();
+    const maxPerTick = Math.ceil((this.chunkMs / 1000) * this.sampleRate) * MAX_CATCHUP_CHUNKS;
     this.timer = setInterval(() => {
       // Deliver everything the elapsed wall clock says should have played;
-      // pacing off elapsed time (not tick count) absorbs timer jitter.
+      // pacing off elapsed time (not tick count) absorbs timer jitter. Cap
+      // the amount per tick so a throttled background tab drains its backlog
+      // over several ticks instead of one main-thread-blocking burst.
       const elapsedSec = (Date.now() - this.startedAt) / 1000;
       const due = Math.min(this.samples.length, Math.floor(elapsedSec * this.sampleRate));
-      if (due > this.position) {
-        onSamples(this.samples.subarray(this.position, due));
-        this.position = due;
+      const end = Math.min(due, this.position + maxPerTick);
+      if (end > this.position) {
+        onSamples(this.samples.subarray(this.position, end));
+        this.position = end;
       }
       if (this.position >= this.samples.length) {
         void this.stop();

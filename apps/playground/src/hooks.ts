@@ -27,7 +27,13 @@ export function useAnimationFrame(draw: () => void): void {
   useEffect(() => {
     let handle = 0;
     const loop = () => {
-      drawRef.current();
+      // A throwing draw callback must not kill the loop — otherwise one bad
+      // frame freezes the panel until it remounts. Log and keep scheduling.
+      try {
+        drawRef.current();
+      } catch (err) {
+        console.error('useAnimationFrame draw callback threw', err);
+      }
       handle = requestAnimationFrame(loop);
     };
     handle = requestAnimationFrame(loop);

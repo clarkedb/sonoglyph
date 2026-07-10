@@ -12,11 +12,26 @@
 const PROCESSOR_SOURCE = `
 class SonoglyphCapture extends AudioWorkletProcessor {
   process(inputs) {
-    const channel = inputs[0] && inputs[0][0];
-    if (channel && channel.length > 0) {
-      const copy = new Float32Array(channel.length);
-      copy.set(channel);
-      this.port.postMessage(copy, [copy.buffer]);
+    const input = inputs[0];
+    if (input) {
+      // Prefer channel 0, but some devices (e.g. a right-only USB input)
+      // leave it empty and carry the signal on another channel — fall back
+      // to the first channel that actually has samples rather than dropping
+      // the input silently.
+      let channel = input[0];
+      if (!channel || channel.length === 0) {
+        for (let c = 1; c < input.length; c++) {
+          if (input[c] && input[c].length > 0) {
+            channel = input[c];
+            break;
+          }
+        }
+      }
+      if (channel && channel.length > 0) {
+        const copy = new Float32Array(channel.length);
+        copy.set(channel);
+        this.port.postMessage(copy, [copy.buffer]);
+      }
     }
     return true;
   }

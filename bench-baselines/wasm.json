@@ -3,7 +3,7 @@
   "metric": "median",
   "unit": "ms",
   "benchmarks": {
-    "engine/push-1s/rustfft": 2.93660450000003,
-    "goertzel/power-2048": 0.003375000000005457
+    "engine/push-1s/rustfft": 6.786,
+    "goertzel/power-2048": 0.00599
   }
 }

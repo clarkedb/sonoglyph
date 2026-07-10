@@ -13,7 +13,7 @@
 
 import { appendFileSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { renderSection, type GateResult } from './lib.ts';
+import { renderSection, toBenchSet, type GateResult } from './lib.ts';
 
 const MARKER = '<!-- sonoglyph-bench-report -->';
 const ENGINES = ['rust', 'ts', 'wasm'];
@@ -26,6 +26,7 @@ const present = new Set(
 );
 
 const sections: string[] = [];
+const blessBlocks: string[] = [];
 let anyRegression = false;
 let anyMissing = false;
 
@@ -40,10 +41,29 @@ for (const engine of ENGINES) {
   ) as GateResult;
   if (result.hasRegression) anyRegression = true;
   sections.push(renderSection(result));
+  blessBlocks.push(
+    `**\`bench-baselines/${engine}.json\`**\n\n\`\`\`json\n${JSON.stringify(
+      toBenchSet(result),
+      null,
+      2,
+    )}\n\`\`\``,
+  );
 }
 
+// Performance baselines are hardware-specific: the committed numbers must come
+// from a CI run, not a local `pnpm bench:bless`. Embedding the exact measured
+// values makes re-blessing (or bootstrapping) a copy-paste from this comment.
+const blessDetails = blessBlocks.length
+  ? [
+      '<details><summary>📋 CI-measured values — copy into <code>bench-baselines/</code> to re-bless</summary>',
+      '',
+      ...blessBlocks,
+      '</details>',
+    ]
+  : [];
+
 const verdict = anyRegression
-  ? '🔴 **Performance regression detected.** Speed it back up, or re-bless the baseline (`pnpm bench:bless`) if the change is intended — or add the **`tolerable regression`** label to override this gate.'
+  ? '🔴 **Performance regression detected.** Speed it back up — or, if the change is intended, re-bless by copying the CI-measured values below into `bench-baselines/`, or add the **`tolerable regression`** label to override this gate.'
   : anyMissing
     ? '⚠️ **Incomplete** — at least one engine produced no results.'
     : '✅ **No regressions** beyond threshold.';
@@ -55,6 +75,8 @@ const body = [
   verdict,
   '',
   ...sections,
+  '',
+  ...blessDetails,
   '',
   '<sub>🔴 regression · 🟢 improvement (re-bless to lock in) · 🆕 new · ⚠️ removed · Δ = % vs baseline, positive = slower</sub>',
 ].join('\n');

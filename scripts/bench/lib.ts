@@ -35,6 +35,7 @@ export interface Row {
 
 export interface GateResult {
   engine: string;
+  metric: string;
   unit: string;
   thresholdPct: number;
   hasRegression: boolean;
@@ -82,11 +83,24 @@ export function compareSets(
 
   return {
     engine: current.engine,
+    metric: current.metric,
     unit: current.unit,
     thresholdPct,
     hasRegression: rows.some((r) => r.status === 'regression'),
     rows,
   };
+}
+
+/**
+ * The result rows, reshaped back into a `BenchSet` — the exact JSON to write to
+ * `bench-baselines/<engine>.json` to re-bless from this run. Performance
+ * baselines are hardware-specific, so the numbers must come from a CI run, not
+ * a local `pnpm bench:bless`; the report embeds this so re-blessing is a copy.
+ */
+export function toBenchSet(result: GateResult): BenchSet {
+  const benchmarks: Record<string, number> = {};
+  for (const r of result.rows) if (r.current !== null) benchmarks[r.name] = r.current;
+  return { engine: result.engine, metric: result.metric, unit: result.unit, benchmarks };
 }
 
 const ICON: Record<RowStatus, string> = {

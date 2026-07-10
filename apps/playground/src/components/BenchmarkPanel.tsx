@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { goertzelPower as tsPower, tones } from '@sonoglyph/dsp';
 import { goertzelPower as wasmPower, initDspWasm } from '@sonoglyph/dsp-wasm';
 import { HIGH_GROUP, LOW_GROUP } from '@sonoglyph/plugin-dtmf';
-import { Panel } from './Panel.tsx';
+import { Panel } from '@sonoglyph/react';
 
 const EXPLAINER =
   'The same Goertzel algorithm, two implementations: the TypeScript reference (@sonoglyph/dsp) ' +

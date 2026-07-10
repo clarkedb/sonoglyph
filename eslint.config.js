@@ -32,7 +32,11 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/playground/**/*.{ts,tsx}', 'website/**/*.{ts,tsx}'],
+    files: [
+      'apps/playground/**/*.{ts,tsx}',
+      'packages/react/**/*.{ts,tsx}',
+      'website/**/*.{ts,tsx}',
+    ],
     plugins: { 'react-hooks': react },
     rules: react.configs.recommended.rules,
   },

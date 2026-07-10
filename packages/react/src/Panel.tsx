@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
-/** A titled panel with a collapsible explainer — the playground's
- * educational content lives as annotations on the live pipeline.
- * The bare `panel` class is a semantic marker (used by tests), not a style. */
+/** A titled panel with a collapsible explainer — Sonoglyph's educational
+ * content lives as annotations on the live pipeline. The bare `panel` class
+ * is a semantic marker (used by playground tests), not a style. */
 export function Panel({
   title,
   explainer,
@@ -11,7 +11,7 @@ export function Panel({
   className,
 }: {
   title: string;
-  explainer: string;
+  explainer: ReactNode;
   controls?: ReactNode;
   children: ReactNode;
   className?: string;

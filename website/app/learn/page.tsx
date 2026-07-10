@@ -4,7 +4,7 @@ import { ARTICLES, EXAMPLES } from './articles';
 export const metadata: Metadata = {
   title: 'Learn',
   description:
-    'A field guide to signal processing, grown from the Sonoglyph playground: sampling, Nyquist, the FFT, peaks, features, and building a recognizer — each with a live interactive.',
+    'A field guide to signal processing, grown from the Sonoglyph playground. Sampling, Nyquist, the FFT, peaks, features, and building a recognizer, each paired with a live interactive.',
 };
 
 export default function LearnIndex() {
@@ -16,9 +16,9 @@ export default function LearnIndex() {
           Learn
         </h1>
         <p className="mt-5 max-w-[62ch] leading-relaxed">
-          Signal processing, one idea at a time — each chapter grown from a panel in the playground,
-          with the same live interactive to poke at. Read top to bottom, or drop into whatever pulls
-          you in.
+          Signal processing, one idea at a time. Each chapter grew out of a panel in the playground
+          and keeps the same live interactive to poke at. Read it top to bottom, or skip straight to
+          whatever you're curious about.
         </p>
       </section>
 
@@ -60,7 +60,7 @@ export default function LearnIndex() {
           Interactive examples
         </h2>
         <p className="mt-3 max-w-[62ch] text-sm leading-relaxed text-ink-dim">
-          Focused, single-purpose demos — smaller than the full{' '}
+          Small, single-purpose demos, each narrower than the full{' '}
           <a
             className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
             href="https://play.sonoglyph.dev"

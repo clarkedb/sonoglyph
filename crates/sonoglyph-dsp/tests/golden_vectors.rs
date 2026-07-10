@@ -7,7 +7,8 @@
 
 use serde_json::Value;
 use sonoglyph_dsp::{
-    detect_peaks, envelope, make_window, spectrum_magnitudes, window_sum, PeakOptions, WindowName,
+    detect_peaks, envelope, make_window, spectrum_magnitudes, window_sum, DspEngine, EngineOptions,
+    FrameData, PeakOptions, Stream, WindowName,
 };
 use sonoglyph_fft::RadixTwoFft;
 use std::f64::consts::PI;
@@ -177,5 +178,77 @@ fn spectral_pipeline_matches_golden() {
             expected["envelope"]["peak"].as_f64().unwrap(),
             &format!("{} peak", v.name),
         );
+    }
+}
+
+#[test]
+fn engine_matches_golden() {
+    let golden: Value = serde_json::from_str(GOLDEN).unwrap();
+
+    for v in engine_vectors() {
+        let expected = &golden[v.name];
+        // The golden engine vectors push exactly one window (hop = window_size),
+        // so the engine emits one frame per stream: spectrum, peaks, envelope.
+        let mut engine = DspEngine::new(EngineOptions {
+            sample_rate: SR,
+            window_size: v.window_size,
+            hop_size: v.window_size,
+            window: v.window,
+            streams: vec![Stream::Spectrum, Stream::Peaks, Stream::Envelope],
+        });
+        let frames = engine.push(&v.input);
+
+        assert_eq!(
+            frames.len() as u64,
+            expected["frameCount"].as_u64().unwrap(),
+            "{}: frame count",
+            v.name
+        );
+
+        for frame in &frames {
+            assert_eq!(frame.time, 0.0, "{}: single-window frame time", v.name);
+            match &frame.data {
+                FrameData::Spectrum(s) => {
+                    let g = expected["spectrum"]["magnitudes"].as_array().unwrap();
+                    assert_eq!(s.magnitudes.len(), g.len(), "{}: bins", v.name);
+                    for (k, (m, gm)) in s.magnitudes.iter().zip(g).enumerate() {
+                        close(
+                            *m as f64,
+                            gm.as_f64().unwrap(),
+                            &format!("{} spectrum[{k}]", v.name),
+                        );
+                    }
+                }
+                FrameData::Peaks(p) => {
+                    let g = expected["peaks"].as_array().unwrap();
+                    assert_eq!(p.peaks.len(), g.len(), "{}: peaks", v.name);
+                    for (i, (peak, gp)) in p.peaks.iter().zip(g).enumerate() {
+                        close(
+                            peak.frequency_hz,
+                            gp["frequencyHz"].as_f64().unwrap(),
+                            &format!("{} peak[{i}].freq", v.name),
+                        );
+                        close(
+                            peak.magnitude,
+                            gp["magnitude"].as_f64().unwrap(),
+                            &format!("{} peak[{i}].mag", v.name),
+                        );
+                    }
+                }
+                FrameData::Envelope(e) => {
+                    close(
+                        e.rms,
+                        expected["envelope"]["rms"].as_f64().unwrap(),
+                        &format!("{} rms", v.name),
+                    );
+                    close(
+                        e.peak,
+                        expected["envelope"]["peak"].as_f64().unwrap(),
+                        &format!("{} peak", v.name),
+                    );
+                }
+                FrameData::Samples(_) => unreachable!("samples stream not requested"),
+            }
+        }
     }
 }

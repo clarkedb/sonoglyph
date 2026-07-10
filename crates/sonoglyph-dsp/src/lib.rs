@@ -7,11 +7,16 @@
 //! element promotes it to a double. Matching the numeric type is what makes
 //! the two implementations agree within the golden tolerance.
 
+pub mod engine;
 pub mod goertzel;
 pub mod peaks;
 pub mod spectrum;
 pub mod window;
 
+pub use engine::{
+    DspEngine, EngineOptions, FeatureFrame, FrameData, PeaksData, SamplesData, SpectrumData,
+    Stream, ENVELOPE_VERSION, PEAKS_VERSION, SAMPLES_VERSION, SPECTRUM_VERSION,
+};
 pub use goertzel::{goertzel_magnitude, goertzel_power};
 pub use peaks::{detect_peaks, PeakOptions, SpectralPeak};
 pub use spectrum::{apply_window, envelope, spectrum_magnitudes, Envelope};

@@ -3,11 +3,11 @@
 # pipeline. rustup is preinstalled on the runner and provisions the exact
 # toolchain (channel + wasm32 target + components) from rust-toolchain.toml.
 #
-# The checks run as parallel jobs (fast fail-in-place, clear signal), mirroring
-# ci.yml's lint/test/build split. `test` runs the cross-validation suite on the
-# host; `wasm` doesn't run anything — it compile-checks the wasm32 target so the
-# crate stays WASM-compatible ahead of the wasm-pack boundary. The `rust` job
-# aggregates them, so branch protection can require one check.
+# The checks run as parallel jobs (fast fail-in-place, clear signal). `test`
+# runs the cross-validation suite on the host; `wasm` doesn't run anything — it
+# compile-checks the wasm32 target so the crate stays WASM-compatible ahead of
+# the wasm-pack boundary. The `rust` job aggregates them, so branch protection
+# can require one check.
 name: Rust
 
 on:
@@ -72,7 +72,7 @@ jobs:
       - run: cargo build --target wasm32-unknown-unknown
 
   # Aggregation gate: green only when every check above passed, so `main`
-  # branch protection can require just this one job (as it does with `build`).
+  # branch protection can require just this one job.
   rust:
     name: Rust
     needs: [fmt, clippy, test, wasm]

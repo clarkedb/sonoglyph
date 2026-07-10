@@ -1,7 +1,6 @@
-//! Sonoglyph DSP core, in Rust — the beginning of the Rust/WASM engine
-//! (issue #16). The TypeScript engine in `packages/dsp` stays the readable
-//! reference; every function here is cross-validated against its frozen
-//! golden vectors (`packages/dsp/src/golden`).
+//! Sonoglyph DSP core, in Rust. The TypeScript engine in `packages/dsp` is the
+//! readable reference; every function here is cross-validated against its
+//! frozen golden vectors (`packages/dsp/src/golden`).
 //!
 //! Inputs are `&[f32]` (a `Float32Array` at the WASM boundary) but the math
 //! runs in `f64` — exactly as JavaScript does, where reading a `Float32Array`

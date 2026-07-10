@@ -4,6 +4,6 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 
-# Rust / Cargo build output. Cargo.lock is committed (this is an application
-# tree, not a library-only one) — see Cargo.toml.
+# Cargo build output. Cargo.lock is committed (application tree, not a
+# library-only one).
 /target/

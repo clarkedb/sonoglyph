@@ -1,6 +1,5 @@
-# Pins the Rust toolchain the same way .nvmrc pins Node and package.json's
-# packageManager pins pnpm: declare it, rustup provisions it on first `cargo`.
-# Bump deliberately; CI reads this same file so local and CI stay in lockstep.
+# rustup provisions this toolchain — channel, wasm32 target, and components —
+# on the first cargo invocation, locally and in CI.
 [toolchain]
 channel = "1.97.0"
 targets = ["wasm32-unknown-unknown"]

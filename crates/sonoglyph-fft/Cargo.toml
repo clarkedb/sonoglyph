@@ -5,3 +5,8 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
+
+[dependencies]
+# The optimized, swappable backend. Compiles to wasm32; a SIMD build
+# (target-feature=+simd128) is where the browser speedup comes from.
+rustfft = "6"

@@ -20,6 +20,13 @@ sonoglyph-fft = { path = "../sonoglyph-fft" }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"
 
-# Test-only: parse the shared golden.json for cross-validation.
+# Test/bench-only. serde_json parses the shared golden.json; proptest fuzzes the
+# engine invariants; criterion benchmarks the two FFT backends.
 [dev-dependencies]
 serde_json = "1"
+proptest = "1"
+criterion = "0.5"
+
+[[bench]]
+name = "engine"
+harness = false

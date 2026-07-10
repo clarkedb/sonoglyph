@@ -5,6 +5,8 @@
 
 use wasm_bindgen::prelude::*;
 
+use sonoglyph_fft::FftBackend;
+
 use crate::engine::{DspEngine, EngineOptions, FeatureFrame, FrameData, Stream};
 use crate::goertzel;
 use crate::window::WindowName;
@@ -76,6 +78,7 @@ impl WasmDspEngine {
         window: u8,
         streams_mask: u8,
         input_capacity: usize,
+        fft_backend: u8,
     ) -> WasmDspEngine {
         let options = EngineOptions {
             sample_rate,
@@ -84,8 +87,15 @@ impl WasmDspEngine {
             window: window_from_u8(window),
             streams: streams_from_mask(streams_mask),
         };
+        // 1 = rustfft (fast, numerically equivalent); anything else = the
+        // bit-exact reference.
+        let backend = if fft_backend == 1 {
+            FftBackend::RustFft
+        } else {
+            FftBackend::RadixTwo
+        };
         WasmDspEngine {
-            engine: DspEngine::new(options),
+            engine: DspEngine::with_backend(options, backend),
             // Fixed capacity, never grown, so `input_ptr` stays valid.
             input: vec![0.0; input_capacity.max(1)],
             frames: Vec::new(),

@@ -4,7 +4,7 @@
 //! per configured stream and advances by the hop size. Everything runs on
 //! plain `f32` buffers, identically on native and (later) WASM.
 
-use sonoglyph_fft::RadixTwoFft;
+use sonoglyph_fft::{make_fft, Fft, FftBackend};
 
 use crate::peaks::{detect_peaks, PeakOptions, SpectralPeak};
 use crate::spectrum::{envelope, spectrum_magnitudes, Envelope};
@@ -97,7 +97,7 @@ impl Default for EngineOptions {
 /// buffers. The same bytes in produce the same frames out.
 pub struct DspEngine {
     options: EngineOptions,
-    fft: RadixTwoFft,
+    fft: Box<dyn Fft>,
     window: Vec<f32>,
     window_norm: f64,
     bin_hz: f64,
@@ -109,10 +109,23 @@ pub struct DspEngine {
 }
 
 impl DspEngine {
+    /// Build the engine with the bit-exact reference FFT (the default; holds
+    /// the golden contract).
+    ///
     /// # Panics
     /// If `window_size` is not a power of two ≥ 2, or `hop_size` is not in
     /// `[1, window_size]`.
     pub fn new(options: EngineOptions) -> Self {
+        Self::with_backend(options, FftBackend::RadixTwo)
+    }
+
+    /// Build the engine with a specific FFT backend — `RustFft` for speed
+    /// (numerically equivalent), `RadixTwo` for the bit-exact reference.
+    ///
+    /// # Panics
+    /// If `window_size` is not a power of two ≥ 2, or `hop_size` is not in
+    /// `[1, window_size]`.
+    pub fn with_backend(options: EngineOptions, backend: FftBackend) -> Self {
         assert!(
             options.window_size >= 2 && (options.window_size & (options.window_size - 1)) == 0,
             "windowSize must be a power of two, got {}",
@@ -124,7 +137,7 @@ impl DspEngine {
             options.hop_size
         );
 
-        let fft = RadixTwoFft::new(options.window_size);
+        let fft = make_fft(backend, options.window_size);
         let window = make_window(options.window, options.window_size);
         // Normalize so a full-scale sine has magnitude ~1.0 in the spectrum.
         let window_norm = window_sum(&window) / 2.0;
@@ -188,7 +201,8 @@ impl DspEngine {
         let has = |s: Stream| self.options.streams.contains(&s);
 
         if has(Stream::Spectrum) || has(Stream::Peaks) {
-            let magnitudes = spectrum_magnitudes(frame, &self.window, self.window_norm, &self.fft);
+            let magnitudes =
+                spectrum_magnitudes(frame, &self.window, self.window_norm, self.fft.as_ref());
             // Compute peaks (borrowing magnitudes) before moving magnitudes into
             // the spectrum frame, keeping the TS emission order: spectrum, peaks.
             let peaks = has(Stream::Peaks)

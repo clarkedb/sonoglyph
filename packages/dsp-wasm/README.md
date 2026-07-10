@@ -6,16 +6,28 @@ the import. Part of the Rust/WASM engine work ([issue #16](https://github.com/cl
 
 ## Build
 
+`pnpm build` (or `pnpm --filter @sonoglyph/dsp-wasm build`) builds this
+package as part of the normal workspace build via `scripts/build.sh`: when
+`cargo` and `wasm-pack` are on `PATH`, it runs `wasm-pack build --target web`
+and writes the generated bindings + `.wasm` to `pkg/` (git-ignored); otherwise
+it skips with a message and the playground falls back to its stub
+(`apps/playground/src/wasm-stub.ts`). This is what lets any environment that
+provisions the Rust toolchain — a dev machine, CI, or a hosting platform's
+build step — end up with the real WASM engine from the same `pnpm build` used
+everywhere else, with no separate manual step or platform-specific config.
+
+To build (or rebuild) just this package explicitly, bypassing the
+availability check:
+
 ```sh
 pnpm --filter @sonoglyph/dsp-wasm build:wasm
 ```
 
-Runs `wasm-pack build --target web` and writes the generated bindings + `.wasm`
-to `pkg/` (git-ignored). Requires the Rust toolchain and `wasm-pack`; see the
-repo's bootstrap notes. **This package is not part of the default TS gates** —
-`pnpm typecheck` / `pnpm test` skip it when `pkg/` is absent, so a TS-only
-contributor needs no Rust toolchain. It is built and checked in the `rust.yml`
-CI job.
+Requires the Rust toolchain and `wasm-pack`; see the repo's bootstrap notes.
+**This package is not part of the default TS gates** — `pnpm typecheck` /
+`pnpm test` skip it when `pkg/` is absent, so a TS-only contributor needs no
+Rust toolchain. `rust.yml`'s CI job always has the toolchain, so it calls
+`build:wasm` directly to fail loudly on a real build error rather than skip.
 
 ## Use
 

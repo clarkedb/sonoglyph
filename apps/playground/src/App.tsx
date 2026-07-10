@@ -1,6 +1,4 @@
-import { useMemo } from 'react';
-import type { SignalSystem } from './controller.ts';
-import { PlaygroundController } from './controller.ts';
+import type { PlaygroundController, SignalSystem } from './controller.ts';
 import { ControllerContext, useController, useControllerTick } from './hooks.ts';
 import { FeaturesPanel } from './components/FeaturesPanel.tsx';
 import { GlyphTimeline } from './components/GlyphTimeline.tsx';
@@ -9,8 +7,9 @@ import { MeaningPanel } from './components/MeaningPanel.tsx';
 import { SpectrumPanel } from './components/SpectrumPanel.tsx';
 import { WaveformPanel } from './components/WaveformPanel.tsx';
 
-export function App() {
-  const controller = useMemo(() => new PlaygroundController(), []);
+// The controller is owned by main.tsx (not created here) so its lifecycle —
+// and its disposal on HMR — sits outside React's render/StrictMode churn.
+export function App({ controller }: { controller: PlaygroundController }) {
   return (
     <ControllerContext.Provider value={controller}>
       <Playground />

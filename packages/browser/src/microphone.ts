@@ -61,7 +61,11 @@ export class MicrophoneSource implements AudioSource {
     this.node = null;
     for (const track of this.stream?.getTracks() ?? []) track.stop();
     this.stream = null;
-    await this.context?.close();
+    // Grab-and-null before the await so an overlapping stop() can't reach a
+    // second close() on the same context (which throws InvalidStateError);
+    // also skip a context already closing/closed.
+    const context = this.context;
     this.context = null;
+    if (context && context.state !== 'closed') await context.close();
   }
 }

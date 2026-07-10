@@ -93,6 +93,9 @@ function DtmfInput({ controller, run }: { controller: PlaygroundController; run:
   // Physical keyboard drives the keypad — mounted only while DTMF is shown.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Ignore auto-repeat: holding a key should play one tone, not
+      // machine-gun playKey for as long as it's down.
+      if (event.repeat) return;
       if (event.target instanceof HTMLInputElement) return;
       const key = event.key.toUpperCase();
       if ((ALL_KEYS as string[]).includes(key)) {

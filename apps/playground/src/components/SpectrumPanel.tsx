@@ -175,6 +175,8 @@ export function SpectrumPanel() {
     >
       <canvas
         ref={canvasRef}
+        role="img"
+        aria-label="Live frequency spectrum: amplitude in decibels across frequency for the most recent analysis window, with detected peaks marked."
         className="block h-[260px] w-full cursor-crosshair rounded-[5px] bg-canvas"
         onMouseMove={(event) => {
           const rect = event.currentTarget.getBoundingClientRect();

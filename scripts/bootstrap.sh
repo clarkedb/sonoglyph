@@ -12,4 +12,15 @@ if [ "$have" != "$want" ]; then
 fi
 
 pnpm install --frozen-lockfile
+
+# Rust is optional: it powers the WASM DSP engine (crates/), but the TS engine
+# is the permanent reference and everything TS-only works without it. Warn and
+# continue rather than fail, so plugin authors never need a Rust toolchain.
+if command -v rustup >/dev/null 2>&1; then
+  echo "✓ rustup found — 'cargo test' provisions the toolchain from rust-toolchain.toml"
+else
+  echo "ℹ Rust not found. TS-only development is fully supported. To work on the"
+  echo "  WASM engine (crates/), install rustup: https://rustup.rs"
+fi
+
 echo "✓ ready — try 'pnpm dev' or 'pnpm test'"

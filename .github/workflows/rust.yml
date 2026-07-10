@@ -1,0 +1,44 @@
+# The Rust job lives in its own workflow with path filters so TS-only changes
+# don't pay the Rust toolchain cost, and Rust-only changes don't spin up the
+# Node pipeline. rustup is preinstalled on the runner and provisions the exact
+# toolchain (channel + wasm32 target + components) from rust-toolchain.toml.
+name: Rust
+
+on:
+  push:
+    branches: [main]
+    paths: &rust-paths
+      - 'crates/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/rust.yml'
+  pull_request:
+    paths: *rust-paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  rust:
+    name: fmt / clippy / test / wasm
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # Installs the toolchain declared in rust-toolchain.toml (channel,
+      # wasm32-unknown-unknown target, rustfmt + clippy) on first invocation.
+      - run: rustup show
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Test
+        run: cargo test
+      - name: WASM target builds
+        run: cargo build --target wasm32-unknown-unknown

@@ -1,0 +1,22 @@
+# The Cargo workspace, sibling to the pnpm workspace. pnpm globs
+# apps/packages/plugins; cargo globs crates. They do not overlap.
+#
+# This is the start of the Rust core (issue #16). The TypeScript engine in
+# packages/dsp remains the readable reference; these crates are cross-validated
+# against its frozen golden vectors (packages/dsp/src/golden).
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/clarkedb/sonoglyph"
+
+# Optimize release/bench builds; the WASM engine's whole reason for existing is
+# speed, so never ship or benchmark a debug build.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

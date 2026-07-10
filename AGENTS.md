@@ -10,6 +10,11 @@ version, installs deps and git hooks). Everyday commands: `pnpm lint`,
 `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm dev` (playground).
 Node version is pinned in `.nvmrc`; pnpm in `package.json#packageManager`.
 
+The Rust core (`crates/`, the WASM DSP engine — see the roadmap's Phase 3) is
+**optional**: TS-only work needs no Rust toolchain. When working in `crates/`,
+`cargo test` / `cargo fmt` / `cargo clippy` provision the pinned toolchain from
+`rust-toolchain.toml`; the same commands run in the `rust.yml` CI job.
+
 ## Skills
 
 Skills follow the [Agent Skills](https://agentskills.io) open standard:

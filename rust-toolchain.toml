@@ -1,0 +1,7 @@
+# Pins the Rust toolchain the same way .nvmrc pins Node and package.json's
+# packageManager pins pnpm: declare it, rustup provisions it on first `cargo`.
+# Bump deliberately; CI reads this same file so local and CI stay in lockstep.
+[toolchain]
+channel = "1.97.0"
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]

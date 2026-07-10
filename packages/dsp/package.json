@@ -9,7 +9,8 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "golden:bless": "node scripts/bless-golden.ts"
   },
   "dependencies": {
     "@sonoglyph/core": "workspace:*"

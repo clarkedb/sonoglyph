@@ -16,7 +16,7 @@ function subscribe(listener: () => void) {
 }
 
 function getSnapshot(): Theme {
-  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
 }
 
 function setDocumentTheme(next: Theme) {
@@ -29,17 +29,22 @@ function setDocumentTheme(next: Theme) {
   listeners.forEach((listener) => listener());
 }
 
+/** Dark is the instrument at night; light is the printed manual page. */
 export function ThemeToggle() {
-  const theme = useSyncExternalStore(subscribe, getSnapshot, () => 'light' as Theme);
+  const theme = useSyncExternalStore(subscribe, getSnapshot, () => 'dark' as Theme);
 
   return (
     <button
       type="button"
       onClick={() => setDocumentTheme(theme === 'dark' ? 'light' : 'dark')}
-      aria-label="Toggle color theme"
-      className="cursor-pointer rounded-md border border-line px-2 py-1 font-mono text-xs text-ink-dim transition-colors hover:border-ink-dim hover:text-ink"
+      aria-label={
+        theme === 'dark'
+          ? 'Switch to the printed (light) theme'
+          : 'Switch to the night (dark) theme'
+      }
+      className="cursor-pointer rounded-sm border border-line px-2.5 py-1 font-mono text-xs text-ink-dim transition-colors hover:border-ink-dim hover:text-ink"
     >
-      {theme === 'dark' ? '☀' : '☾'}
+      {theme === 'dark' ? 'print' : 'night'}
     </button>
   );
 }

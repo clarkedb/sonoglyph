@@ -1,36 +1,30 @@
-import { PipelineFigure } from './pipeline-figure';
+import { Instrument } from './instrument';
 import { REPO_URL } from './site';
 
-const PACKAGES = [
+const SPECS = [
   {
-    name: 'packages/core',
-    blurb:
-      'Shared contracts — Glyph, FeatureFrame, RecognizerPlugin, DspEngine, AudioSource. Types only, zero dependencies.',
+    unit: 'packages/core',
+    role: 'Shared contracts — Glyph, FeatureFrame, RecognizerPlugin, DspEngine, AudioSource. Types only, zero dependencies.',
   },
   {
-    name: 'packages/dsp',
-    blurb:
-      'The TypeScript reference DSP engine: windowing, radix-2 FFT, spectral peaks, envelope, and the pipeline runner.',
+    unit: 'packages/dsp',
+    role: 'The TypeScript reference DSP engine: windowing, radix-2 FFT, spectral peaks, envelope, and the pipeline runner.',
   },
   {
-    name: 'packages/browser',
-    blurb:
-      'Browser audio: microphone capture via a dumb AudioWorklet, ring buffer, WAV codec, streaming buffer source.',
+    unit: 'packages/browser',
+    role: 'Browser audio: microphone capture via a dumb AudioWorklet, ring buffer, WAV codec, streaming buffer source.',
   },
   {
-    name: 'packages/plugin-sdk',
-    blurb:
-      'defineRecognizer(...) and friends — per-frame classifiers get debouncing and segmentation for free.',
+    unit: 'packages/plugin-sdk',
+    role: 'defineRecognizer(...) and friends — per-frame classifiers get debouncing and segmentation for free.',
   },
   {
-    name: 'plugins/dtmf',
-    blurb:
-      'The reference recognizer: all 16 DTMF keys from spectral peak pairs — FFT and Goertzel strategies, side by side.',
+    unit: 'plugins/dtmf',
+    role: 'The reference recognizer: all 16 DTMF keys from spectral peak pairs — FFT and Goertzel strategies, side by side.',
   },
   {
-    name: 'plugins/morse',
-    blurb:
-      'Time-domain recognition off the envelope stream: dots, dashes, letters — and a translator that gives them meaning.',
+    unit: 'plugins/morse',
+    role: 'Time-domain recognition off the envelope stream: dots, dashes, letters — and a translator that gives them meaning.',
   },
 ] as const;
 
@@ -43,124 +37,104 @@ const GLYPHS = [
 
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl px-6">
+    <main className="mx-auto max-w-4xl px-6">
       {/* Hero */}
-      <section className="pt-16 pb-14 sm:pt-24">
+      <section className="pt-16 sm:pt-24">
         <p className="font-mono text-[13px] text-ink-dim">beep boop beep = hello, world?</p>
-        <h1 className="mt-5 font-display text-5xl tracking-tight sm:text-6xl">Sonoglyph</h1>
-        <p className="mt-4 font-display text-xl text-ink-dim italic">Signals in. Symbols out.</p>
+        <h1 className="mt-5 font-display text-6xl font-semibold tracking-wide text-ink uppercase sm:text-7xl">
+          Sonoglyph
+        </h1>
+        <p className="mt-3 text-xl text-ink-dim">
+          Watch sound become <span className="text-glow text-phosphor">symbols</span>.
+        </p>
         <p className="mt-6 max-w-[62ch] leading-relaxed">
           A browser-first, extensible signal recognition framework: a reusable DSP pipeline —
           microphone to spectrum to detected features — and a plugin architecture that turns those
-          features into <Term>glyphs</Term>, symbolic representations of recognized signals.
+          features into <strong className="font-semibold text-phosphor">glyphs</strong>, symbolic
+          representations of recognized signals.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a
             href={REPO_URL}
-            className="rounded-md bg-ink px-4 py-2 font-mono text-sm text-paper transition-opacity hover:opacity-85"
+            className="rounded-sm border border-phosphor-dim px-4 py-2 font-mono text-sm text-phosphor transition-colors hover:border-phosphor"
           >
             github ↗
           </a>
           <a
             href={`${REPO_URL}/blob/main/docs/architecture.md`}
-            className="rounded-md border border-line px-4 py-2 font-mono text-sm text-ink transition-colors hover:border-ink-dim"
+            className="rounded-sm border border-line px-4 py-2 font-mono text-sm text-ink transition-colors hover:border-ink-dim"
           >
             architecture
           </a>
         </div>
       </section>
 
-      <Rule />
-
-      {/* Pipeline */}
-      <section className="py-14">
-        <SectionLabel>the pipeline</SectionLabel>
-        <p className="mt-5 max-w-[62ch] leading-relaxed">
-          Press <Mono>5</Mono> on a phone keypad and it sings two tones at once — 770 Hz and 1336
-          Hz. Below, that signal moves through the pipeline; in the{' '}
-          <a
-            className="underline decoration-line underline-offset-4 transition-colors hover:decoration-ink-dim"
-            href={`${REPO_URL}#quick-start`}
-          >
-            playground
-          </a>{' '}
-          every one of these stages is live and inspectable.
-        </p>
-        <div className="mt-7">
-          <PipelineFigure />
-        </div>
+      {/* Fig. 1 — the instrument */}
+      <section className="mt-16 sm:mt-20">
+        <Instrument />
       </section>
 
-      <Rule />
-
-      {/* The idea */}
-      <section className="py-14">
-        <SectionLabel>the idea</SectionLabel>
-        <p className="mt-5 max-w-[62ch] leading-relaxed">
+      {/* Theory of operation */}
+      <section className="mt-20 sm:mt-24">
+        <h2 className="font-display text-2xl font-medium tracking-wide text-ink uppercase">
+          Theory of operation
+        </h2>
+        <p className="mt-4 max-w-[62ch] leading-relaxed">
           The core never knows what a signal <em>means</em>; plugins do. A DTMF key, a Morse dash, a
           musical chord, and a syllable of an alien language are all glyphs — one abstraction, any
           structured signal system. And every stage of the pipeline is observable, because the
           project is as much about <em>teaching</em> signal processing as performing it. Inspired by
           the translator in <em>Project Hail Mary</em>.
         </p>
-        <div className="mt-7 flex flex-wrap gap-2.5">
+        <div className="mt-6 flex flex-wrap gap-2.5">
           {GLYPHS.map((g) => (
             <span
               key={g.system}
-              className="flex items-baseline gap-2 rounded-md border border-line bg-panel px-3 py-1.5 font-mono text-sm"
+              className="flex items-baseline gap-2 rounded-sm border border-line bg-panel px-3 py-1.5 font-mono text-sm"
             >
-              <span className="text-accent">⟨{g.symbol}⟩</span>
+              <span className="text-phosphor">⟨{g.symbol}⟩</span>
               <span className="text-[11px] text-ink-dim">{g.system}</span>
             </span>
           ))}
         </div>
       </section>
 
-      <Rule />
-
-      {/* Workspace */}
-      <section className="py-14">
-        <SectionLabel>inside the workspace</SectionLabel>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {PACKAGES.map((pkg) => (
-            <div key={pkg.name} className="rounded-md border border-line bg-panel p-4">
-              <h3 className="font-mono text-[13px]">{pkg.name}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-ink-dim">{pkg.blurb}</p>
-            </div>
-          ))}
-        </div>
-        <p className="mt-6 font-mono text-xs leading-relaxed text-ink-dim">
-          next: a hosted playground and a Learn section — interactive articles grown from the
-          playground&rsquo;s embedded explainers. until then: clone, <Mono>pnpm dev</Mono>.
+      {/* Specifications */}
+      <section className="mt-20 sm:mt-24">
+        <h2 className="font-display text-2xl font-medium tracking-wide text-ink uppercase">
+          Specifications
+        </h2>
+        <table className="mt-5 w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-line text-left font-mono text-[11px] tracking-wide text-ink-dim uppercase">
+              <th scope="col" className="py-2 pr-4 font-normal">
+                unit
+              </th>
+              <th scope="col" className="py-2 font-normal">
+                function
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {SPECS.map((spec) => (
+              <tr key={spec.unit} className="border-b border-line align-top">
+                <th
+                  scope="row"
+                  className="py-3 pr-4 text-left font-mono text-[13px] font-normal whitespace-nowrap text-phosphor-dim"
+                >
+                  {spec.unit}
+                </th>
+                <td className="py-3 leading-relaxed text-ink-dim">{spec.role}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="mt-6 max-w-[70ch] font-mono text-xs leading-relaxed text-ink-dim">
+          in progress: a hosted playground and a Learn section — interactive articles grown from the
+          playground&rsquo;s embedded explainers. until then: clone the repo,{' '}
+          <code className="rounded-sm border border-line bg-panel px-1.5 py-0.5">pnpm dev</code>.
         </p>
       </section>
     </main>
-  );
-}
-
-function Rule() {
-  return <div aria-hidden className="rule-ticks" />;
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="font-mono text-xs tracking-[0.2em] text-ink-dim uppercase">
-      <span aria-hidden className="text-accent">
-        ∿{' '}
-      </span>
-      {children}
-    </h2>
-  );
-}
-
-function Term({ children }: { children: React.ReactNode }) {
-  return <strong className="font-semibold text-accent">{children}</strong>;
-}
-
-function Mono({ children }: { children: React.ReactNode }) {
-  return (
-    <code className="rounded border border-line bg-panel px-1.5 py-0.5 font-mono text-[0.85em]">
-      {children}
-    </code>
   );
 }

@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sonoglyph/core": "workspace:*",
+    "@sonoglyph/dsp": "workspace:*",
+    "@sonoglyph/plugin-dtmf": "workspace:*",
     "next": "^15.5.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

@@ -35,3 +35,10 @@ one directory per skill containing a `SKILL.md` with `name` and
 Existing skills: `create-pr` (verification + PR conventions), `verify`
 (build/launch/drive recipe for the playground), and `review-pr`
 (multi-agent PR review with a verifying judge pass).
+
+## Design context
+
+[website/PRODUCT.md](website/PRODUCT.md) governs design decisions for the
+website (register, audience, brand personality, design principles). Read
+it before any website design or copy work; update it when the strategy
+changes, not per tweak.

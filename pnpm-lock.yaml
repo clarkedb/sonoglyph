@@ -149,6 +149,15 @@ importers:
 
   website:
     dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../packages/core
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../packages/dsp
+      '@sonoglyph/plugin-dtmf':
+        specifier: workspace:*
+        version: link:../plugins/dtmf
       next:
         specifier: ^15.5.0
         version: 15.5.20(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)

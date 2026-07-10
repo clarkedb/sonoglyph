@@ -4,10 +4,10 @@
 # toolchain (channel + wasm32 target + components) from rust-toolchain.toml.
 #
 # The checks run as parallel jobs (fast fail-in-place, clear signal). `test`
-# runs the cross-validation suite on the host; `wasm` doesn't run anything — it
-# compile-checks the wasm32 target so the crate stays WASM-compatible ahead of
-# the wasm-pack boundary. The `rust` job aggregates them, so branch protection
-# can require one check.
+# runs the native cross-validation suite; `wasm` compile-checks the wasm32
+# target (fast, wasm-pack-independent); `wasm-pkg` builds @sonoglyph/dsp-wasm
+# with wasm-pack and cross-validates it against the TS reference. The `rust` job
+# aggregates them, so branch protection can require one check.
 name: Rust
 
 on:
@@ -15,6 +15,7 @@ on:
     branches: [main]
     paths: &rust-paths
       - 'crates/**'
+      - 'packages/dsp-wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
@@ -71,12 +72,33 @@ jobs:
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo build --target wasm32-unknown-unknown
 
+  # Builds @sonoglyph/dsp-wasm with wasm-pack and cross-validates it against the
+  # TS reference. Needs both the Rust toolchain and Node/pnpm.
+  wasm-pkg:
+    name: WASM package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - run: rustup show
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa # v0.4.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @sonoglyph/dsp-wasm build:wasm
+      - run: pnpm --filter @sonoglyph/dsp-wasm typecheck:wasm
+      - run: pnpm exec vitest run packages/dsp-wasm/src/index.test.ts
+
   # Aggregation gate: green only when every check above passed, so `main`
   # branch protection can require just this one job.
   rust:
     name: Rust
-    needs: [fmt, clippy, test, wasm]
+    needs: [fmt, clippy, test, wasm, wasm-pkg]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - run: echo "fmt, clippy, test, and wasm build all passed"
+      - run: echo "fmt, clippy, test, wasm build, and wasm package all passed"

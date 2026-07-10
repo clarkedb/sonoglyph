@@ -38,6 +38,9 @@ export { goertzelMagnitude, goertzelPower };
 
 export type WasmWindow = 'rectangular' | 'hann' | 'hamming' | 'blackman';
 export type WasmStream = 'spectrum' | 'peaks' | 'envelope' | 'samples';
+/** FFT backend: `'radix2'` is the bit-exact reference; `'rustfft'` is faster
+ *  but only numerically equivalent (not bit-identical to the TS engine). */
+export type WasmFftBackend = 'radix2' | 'rustfft';
 
 export interface WasmEngineOptions {
   sampleRate?: number;
@@ -47,6 +50,8 @@ export interface WasmEngineOptions {
   streams?: WasmStream[];
   /** Max samples per `push()`; longer signals must be chunked by the caller. */
   inputCapacity?: number;
+  /** Defaults to `'radix2'` (bit-exact). Use `'rustfft'` for speed. */
+  backend?: WasmFftBackend;
 }
 
 /** `frameStream()` codes. */
@@ -89,6 +94,7 @@ export class WasmDspEngine {
       WINDOW_CODE[options.window ?? 'hann'],
       mask,
       options.inputCapacity ?? 16_384,
+      options.backend === 'rustfft' ? 1 : 0,
     );
     this.#memory = wasmMemory() as WebAssembly.Memory;
     this.#capacity = this.#raw.inputCapacity();

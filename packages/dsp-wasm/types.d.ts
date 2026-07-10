@@ -29,6 +29,7 @@ export declare function goertzelPower(
 
 export type WasmWindow = 'rectangular' | 'hann' | 'hamming' | 'blackman';
 export type WasmStream = 'spectrum' | 'peaks' | 'envelope' | 'samples';
+export type WasmFftBackend = 'radix2' | 'rustfft';
 
 export interface WasmEngineOptions {
   sampleRate?: number;
@@ -38,6 +39,8 @@ export interface WasmEngineOptions {
   streams?: WasmStream[];
   /** Max samples per `push()`; longer signals must be chunked by the caller. */
   inputCapacity?: number;
+  /** Defaults to `'radix2'` (bit-exact). Use `'rustfft'` for speed. */
+  backend?: WasmFftBackend;
 }
 
 /** `frameStream()` codes. */

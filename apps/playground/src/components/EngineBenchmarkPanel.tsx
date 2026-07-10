@@ -5,14 +5,16 @@ import { Panel } from '@sonoglyph/react';
 
 const EXPLAINER =
   'The whole DSP engine, both ways: the TypeScript reference (@sonoglyph/dsp) and the Rust core ' +
-  'compiled to WebAssembly (@sonoglyph/dsp-wasm). Each processes a multi-second signal into ' +
-  'overlapping analysis windows — an FFT, peak detection, and an envelope per window — and the ' +
-  'two agree to the shared golden tolerance: a full-engine cross-validation, running live in ' +
-  'your browser. On speed the result is honest. The Rust FFT here is a bit-exact port of the TS ' +
-  'one — chosen so the numbers match to the last bit — not a performance-tuned transform, so it ' +
-  'runs about even with V8’s JIT on this radix-2 loop. The compute win comes from swapping in a ' +
-  'SIMD FFT backend (rustfft) behind the same interface — a later step — not from “WASM” alone. ' +
-  'What WASM buys today is a second, independent implementation that proves the first correct.';
+  'compiled to WebAssembly (@sonoglyph/dsp-wasm). Each turns a multi-second signal into ' +
+  'overlapping analysis windows — an FFT, peak detection, and an envelope per window. This is ' +
+  'the compute-bound batch workload WASM is for: the samples cross the boundary once into a ' +
+  'reusable buffer, then hundreds of FFTs run with no per-window JavaScript allocation, using ' +
+  'the optimized rustfft backend. It runs faster than V8’s JIT here — modestly, because this is ' +
+  'plain (non-SIMD) WASM; enabling WASM SIMD would widen the gap. And it stays correct: rustfft ' +
+  'is numerically equivalent to the bit-exact reference backend, which is itself pinned to the ' +
+  'golden vectors in CI — so the two engines agree to a hair, live in your browser. (Contrast ' +
+  'the single Goertzel probe above, which is about even — there the per-call boundary copy, not ' +
+  'compute, dominates.)';
 
 const SAMPLE_RATE = 48_000;
 const DURATION_SEC = 2;
@@ -70,6 +72,7 @@ function timeWasm(sig: Float32Array, repeats: number): number {
       sampleRate: SAMPLE_RATE,
       windowSize: WINDOW_SIZE,
       hopSize: HOP_SIZE,
+      backend: 'rustfft',
     });
     try {
       for (let off = 0; off < sig.length; off += engine.inputCapacity) {
@@ -105,6 +108,7 @@ function spectraMaxDiff(): number {
     sampleRate: SAMPLE_RATE,
     windowSize: WINDOW_SIZE,
     hopSize: WINDOW_SIZE,
+    backend: 'rustfft',
   });
   try {
     const count = engine.push(one);
@@ -236,8 +240,9 @@ function EngineResult({ result }: { result: Result }) {
         {windowsPerRepeat.toLocaleString()} analysis windows each ({DURATION_SEC}s of audio).
       </p>
       <p className="text-faint">
-        Spectra match to Δ&nbsp;{maxDiff === 0 ? '0' : maxDiff.toExponential(1)} — the same golden
-        cross-validation, running live in your browser.
+        Spectra match to Δ&nbsp;{maxDiff === 0 ? '0' : maxDiff.toExponential(1)} — numerically
+        equivalent to the TS reference (the bit-exact backend, pinned to the golden vectors in CI,
+        guarantees it exactly).
       </p>
     </div>
   );

@@ -15,9 +15,13 @@
 # workflow — and the "Bench" required-status-check context — never reports
 # *anything* for a PR that doesn't touch these paths, so a required check
 # gets stuck "Expected" forever and blocks merge. Filtering in-job instead
-# means the workflow always runs, `run` is skipped entirely when irrelevant,
-# and the `bench` aggregate job (the one branch protection requires) always
-# executes via `if: always()` and reports a real conclusion either way.
+# means the workflow always runs, and `run` plus the `bench` aggregate job
+# (the one branch protection requires) are both honestly skipped when
+# irrelevant — GitHub treats a skipped required check as satisfied, so this
+# unblocks merge without faking a green pass. `bench`'s `if: always() && ...`
+# only overrides the default skip-on-skipped-dependency behavior when
+# bench-relevant changes did land, so a real regression (or a crashed `run`
+# job) still fails `bench` rather than being masked as a skip.
 #
 # Re-bless intentionally-moved numbers with `pnpm bench:bless` (see
 # scripts/bench/bless.sh) and commit the bench-baselines/ diff.
@@ -132,14 +136,19 @@ jobs:
             gh api -X POST "repos/$REPO/issues/$PR/comments" --input payload.json > /dev/null
           fi
 
-  # Aggregation gate: this is the context branch protection requires, so it
-  # must always report a conclusion. `if: always()` makes it run even when
-  # `run` was skipped (no bench-relevant changes) — it only fails on an
-  # actual regression (or job failure), never on a skip.
+  # Aggregation gate: this is the context branch protection requires. It's
+  # honestly *skipped* (not a manufactured pass) when there are no
+  # bench-relevant changes — GitHub treats a skipped required check as
+  # satisfied, so branch protection isn't blocked, but the PR's checks list
+  # still shows "didn't run" rather than a misleading green checkmark.
+  # `always()` overrides the default "skip if a dependency was skipped or
+  # failed" behavior *only* when bench-relevant changes did land, so a real
+  # regression (or a crashed `run` job) still fails this job instead of
+  # being masked as a skip.
   bench:
     name: Bench
     needs: [changes, run]
-    if: always()
+    if: always() && needs.changes.outputs.bench == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -150,10 +159,6 @@ jobs:
     steps:
       - name: Gate
         run: |
-          if [ "${{ needs.changes.outputs.bench }}" != "true" ]; then
-            echo "No bench-relevant changes — DSP benchmarks skipped."
-            exit 0
-          fi
           if [ "${{ needs.run.result }}" != "success" ]; then
             echo "::error::Bench run job did not complete (${{ needs.run.result }})."
             exit 1

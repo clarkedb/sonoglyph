@@ -8,10 +8,13 @@
 # workflow — and every job's required-status-check context — never reports
 # *anything* for a PR that doesn't touch these paths, so a required check
 # gets stuck "Expected" forever and blocks merge. Filtering in-job instead
-# means the workflow always runs, `fmt`/`clippy`/`test`/`wasm`/`wasm-pkg` are
-# individually skipped when irrelevant, and the `rust` aggregate job (the one
-# branch protection requires) always executes via `if: always()` and reports
-# a real conclusion either way.
+# means the workflow always runs, and `fmt`/`clippy`/`test`/`wasm`/`wasm-pkg`
+# plus the `rust` aggregate job (the one branch protection requires) are all
+# honestly skipped when irrelevant — GitHub treats a skipped required check
+# as satisfied, so this unblocks merge without faking a green pass. `rust`'s
+# `if: always() && ...` only overrides the default skip-on-skipped-dependency
+# behavior when Rust-relevant changes did land, so a real fmt/clippy/test/
+# wasm/wasm-pkg failure still fails `rust` rather than being masked as a skip.
 #
 # The checks run as parallel jobs (fast fail-in-place, clear signal). `test`
 # runs the native cross-validation suite; `wasm` compile-checks the wasm32
@@ -128,14 +131,19 @@ jobs:
       # (ci.yml's build job covers the stub path, where pkg/ is absent).
       - run: pnpm --filter @sonoglyph/playground build
 
-  # Aggregation gate: this is the context branch protection requires, so it
-  # must always report a conclusion. `if: always()` makes it run even when
-  # fmt/clippy/test/wasm/wasm-pkg were skipped (no Rust-relevant changes) —
-  # it only fails on an actual job failure, never on a skip.
+  # Aggregation gate: this is the context branch protection requires. It's
+  # honestly *skipped* (not a manufactured pass) when there are no
+  # Rust-relevant changes — GitHub treats a skipped required check as
+  # satisfied, so branch protection isn't blocked, but the PR's checks list
+  # still shows "didn't run" rather than a misleading green checkmark.
+  # `always()` overrides the default "skip if a dependency was skipped or
+  # failed" behavior *only* when Rust-relevant changes did land, so a real
+  # failure in fmt/clippy/test/wasm/wasm-pkg still fails this job instead of
+  # being masked as a skip.
   rust:
     name: Rust
     needs: [changes, fmt, clippy, test, wasm, wasm-pkg]
-    if: always()
+    if: always() && needs.changes.outputs.rust == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -144,9 +152,5 @@ jobs:
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
             echo "::error::one or more Rust jobs failed"
             exit 1
-          fi
-          if [ "${{ needs.changes.outputs.rust }}" != "true" ]; then
-            echo "No Rust-relevant changes — fmt/clippy/test/wasm/wasm-pkg skipped."
-            exit 0
           fi
           echo "fmt, clippy, test, wasm build, and wasm package all passed"

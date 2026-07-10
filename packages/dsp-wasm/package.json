@@ -18,6 +18,9 @@
     "build:wasm": "wasm-pack build ../../crates/sonoglyph-dsp --target web --out-name sonoglyph_dsp --out-dir ../../packages/dsp-wasm/pkg",
     "typecheck:wasm": "tsc --noEmit"
   },
+  "dependencies": {
+    "@sonoglyph/core": "workspace:*"
+  },
   "devDependencies": {
     "@sonoglyph/dsp": "workspace:*"
   }

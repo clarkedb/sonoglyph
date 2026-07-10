@@ -109,6 +109,10 @@ importers:
         version: link:../core
 
   packages/dsp-wasm:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@sonoglyph/dsp':
         specifier: workspace:*

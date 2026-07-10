@@ -3,6 +3,7 @@ import type { WindowName } from '@sonoglyph/core';
 import { WINDOW_NAMES } from '@sonoglyph/dsp';
 import { HIGH_GROUP, LOW_GROUP } from '@sonoglyph/plugin-dtmf';
 import { Panel, SpectrumView } from '@sonoglyph/react';
+import type { EngineChoice } from '../controller.ts';
 import { useController, useControllerTick } from '../hooks.ts';
 
 const EXPLAINER =
@@ -13,7 +14,11 @@ const EXPLAINER =
   'spikes) but smears events in time, so fast key presses blur together. A smaller window ' +
   'reacts faster but the spikes fatten until neighbors merge. The window function shapes the ' +
   'skirt around each spike — switch to rectangular and watch the leakage spread. Hover for ' +
-  'exact values.';
+  'exact values. The engine selector swaps which implementation runs the whole live pipeline — ' +
+  'the readable TypeScript reference (the default) or the Rust core compiled to WebAssembly — ' +
+  'and the spectrum, peaks, and decoded glyphs stay the same either way (that they agree is the ' +
+  'whole point of keeping both). WASM needs the Rust build; without it the option stays disabled ' +
+  'and the playground runs on TypeScript.';
 
 const WINDOW_SIZES = [512, 1024, 2048, 4096, 8192];
 const MAX_FREQ_CHOICES = [2500, 5000, 12000, 24000];
@@ -26,7 +31,7 @@ export function SpectrumPanel() {
   useControllerTick();
   const [maxFreq, setMaxFreq] = useState(2500);
 
-  const { windowSize, window: windowName, sampleRate } = controller.status;
+  const { windowSize, window: windowName, sampleRate, engine, wasmState } = controller.status;
 
   return (
     <Panel
@@ -35,6 +40,22 @@ export function SpectrumPanel() {
       className="col-span-full"
       controls={
         <>
+          <label className={LABEL}>
+            Engine
+            <select
+              value={engine}
+              onChange={(event) => controller.setEngine(event.target.value as EngineChoice)}
+            >
+              <option value="ts">TypeScript</option>
+              <option value="wasm" disabled={wasmState !== 'ready'}>
+                {wasmState === 'ready'
+                  ? 'WASM (Rust)'
+                  : wasmState === 'init'
+                    ? 'WASM (loading…)'
+                    : 'WASM (not built)'}
+              </option>
+            </select>
+          </label>
           <label className={LABEL}>
             Window
             <select

@@ -8,6 +8,17 @@
  * step lives here so the rest of the app sees a synchronous API.
  */
 
+import type {
+  DspEngine,
+  DspEngineOptions,
+  EnvelopeData,
+  FeatureFrame,
+  PeaksData,
+  SamplesData,
+  SpectralPeak,
+  SpectrumData,
+} from '@sonoglyph/core';
+import { STREAM_ENVELOPE, STREAM_PEAKS, STREAM_SAMPLES, STREAM_SPECTRUM } from '@sonoglyph/core';
 // wasm-pack emits real `.js` glue with no `.ts` source, so this import is a
 // genuine `.js` specifier — the one case the repo's no-`.js`-import rule can't cover.
 /* eslint-disable no-restricted-syntax */
@@ -120,6 +131,15 @@ export class WasmDspEngine {
     return this.#raw.push(samples.length);
   }
 
+  /**
+   * Drain the engine's tail at end of stream; returns the number of frames
+   * produced (readable via the accessors until the next `push`, exactly like
+   * `push`). Mirrors the `DspEngine.flush` contract.
+   */
+  flush(): number {
+    return this.#raw.flush();
+  }
+
   reset(): void {
     this.#raw.reset();
   }
@@ -129,8 +149,21 @@ export class WasmDspEngine {
   frameStream(i: number): number {
     return this.#raw.frameStream(i);
   }
+  frameTime(i: number): number {
+    return this.#raw.frameTime(i);
+  }
   spectrumMagnitudes(i: number): Float32Array {
     return this.#raw.spectrumMagnitudes(i);
+  }
+  /** Peaks of frame `i` as flat `[frequencyHz, magnitude, bin]` triples,
+   * strongest first (empty if frame `i` is not a peaks frame). */
+  peakData(i: number): Float64Array {
+    return this.#raw.peakData(i);
+  }
+  /** Raw analysis samples of frame `i`, a copy safe to hold across pushes
+   * (empty if frame `i` is not a samples frame). */
+  sampleFrame(i: number): Float32Array {
+    return this.#raw.sampleFrame(i);
   }
   envelopeRms(i: number): number {
     return this.#raw.envelopeRms(i);
@@ -141,5 +174,148 @@ export class WasmDspEngine {
   /** Release the underlying WASM object. */
   free(): void {
     this.#raw.free();
+  }
+}
+
+// Stream schema versions — mirror `@sonoglyph/dsp`'s `TsDspEngine` and the
+// Rust engine, which all agree at 1. Kept local so this package needn't
+// depend on `@sonoglyph/dsp` at runtime.
+const SPECTRUM_VERSION = 1;
+const PEAKS_VERSION = 1;
+const ENVELOPE_VERSION = 1;
+const SAMPLES_VERSION = 1;
+
+/** Defaults matching `@sonoglyph/dsp`'s `DEFAULT_ENGINE_OPTIONS`. */
+const DEFAULT_OPTIONS: DspEngineOptions = {
+  sampleRate: 48_000,
+  windowSize: 2048,
+  hopSize: 512,
+  window: 'hann',
+  streams: [STREAM_SPECTRUM, STREAM_PEAKS, STREAM_ENVELOPE],
+};
+
+const KNOWN_STREAMS: readonly WasmStream[] = ['spectrum', 'peaks', 'envelope', 'samples'];
+
+/**
+ * The WASM engine behind the full `@sonoglyph/core` `DspEngine` contract, so it
+ * drops straight into a `Pipeline` in place of `TsDspEngine`. Where the raw
+ * `WasmDspEngine` exposes a low-level pull API (indexed accessors, no framing
+ * types — ideal for the benchmark's zero-allocation hot loop), this adapter
+ * marshals each frame back into `FeatureFrame` objects with copied payloads the
+ * recognizers and visualizations already consume, so nothing downstream can
+ * tell which engine produced them.
+ *
+ * Defaults to the fast `rustfft` backend (numerically equivalent to the TS
+ * reference, pinned to the golden vectors in CI). It owns a WASM object: call
+ * `free()` when replacing or discarding it.
+ */
+export class WasmDspEngineAdapter implements DspEngine {
+  readonly options: Readonly<DspEngineOptions>;
+
+  #raw: WasmDspEngine;
+  readonly #span: number;
+  readonly #hop: number;
+  readonly #binHz: number;
+  readonly #capacity: number;
+
+  /**
+   * @param options Engine configuration; missing fields fall back to the
+   *   `TsDspEngine` defaults.
+   * @param backend FFT backend — `'rustfft'` (default) is fast and numerically
+   *   equivalent; `'radix2'` is the bit-exact reference (slower).
+   */
+  constructor(options: Partial<DspEngineOptions> = {}, backend: WasmFftBackend = 'rustfft') {
+    const opts: DspEngineOptions = { ...DEFAULT_OPTIONS, ...options };
+    this.options = opts;
+    this.#span = opts.windowSize / opts.sampleRate;
+    this.#hop = opts.hopSize / opts.sampleRate;
+    this.#binHz = opts.sampleRate / opts.windowSize;
+    this.#raw = new WasmDspEngine({
+      sampleRate: opts.sampleRate,
+      windowSize: opts.windowSize,
+      hopSize: opts.hopSize,
+      window: opts.window,
+      streams: opts.streams.filter((s): s is WasmStream => KNOWN_STREAMS.includes(s as WasmStream)),
+      backend,
+    });
+    this.#capacity = this.#raw.inputCapacity;
+  }
+
+  push(samples: Float32Array): FeatureFrame[] {
+    const frames: FeatureFrame[] = [];
+    // The raw engine caps a single push at `inputCapacity`; chunk longer input
+    // ourselves so this stays a drop-in for `TsDspEngine.push`, which accepts
+    // any length. The engine buffers across chunks, so the frames are identical
+    // to one big push (the chunking invariant).
+    for (let off = 0; off < samples.length; off += this.#capacity) {
+      const count = this.#raw.push(
+        samples.subarray(off, Math.min(off + this.#capacity, samples.length)),
+      );
+      this.#collect(count, frames);
+    }
+    return frames;
+  }
+
+  flush(): FeatureFrame[] {
+    const frames: FeatureFrame[] = [];
+    this.#collect(this.#raw.flush(), frames);
+    return frames;
+  }
+
+  reset(): void {
+    this.#raw.reset();
+  }
+
+  /** Release the underlying WASM object. Not part of `DspEngine`, but the
+   * owner must call it when swapping engines to avoid leaking WASM memory. */
+  free(): void {
+    this.#raw.free();
+  }
+
+  /** Read back the frames of the last `push`/`flush` (indices `0..count`) as
+   * `FeatureFrame` objects with copied payloads, before the next call
+   * invalidates them. */
+  #collect(count: number, out: FeatureFrame[]): void {
+    for (let i = 0; i < count; i++) {
+      const time = this.#raw.frameTime(i);
+      switch (this.#raw.frameStream(i)) {
+        case STREAM.spectrum: {
+          const data: SpectrumData = {
+            magnitudes: this.#raw.spectrumMagnitudes(i),
+            binHz: this.#binHz,
+            window: this.options.window,
+          };
+          out.push(this.#frame(STREAM_SPECTRUM, SPECTRUM_VERSION, time, data));
+          break;
+        }
+        case STREAM.peaks: {
+          const flat = this.#raw.peakData(i);
+          const peaks: SpectralPeak[] = [];
+          for (let j = 0; j < flat.length; j += 3) {
+            peaks.push({ frequencyHz: flat[j]!, magnitude: flat[j + 1]!, bin: flat[j + 2]! });
+          }
+          const data: PeaksData = { peaks };
+          out.push(this.#frame(STREAM_PEAKS, PEAKS_VERSION, time, data));
+          break;
+        }
+        case STREAM.envelope: {
+          const data: EnvelopeData = {
+            rms: this.#raw.envelopeRms(i),
+            peak: this.#raw.envelopePeak(i),
+          };
+          out.push(this.#frame(STREAM_ENVELOPE, ENVELOPE_VERSION, time, data));
+          break;
+        }
+        case STREAM.samples: {
+          const data: SamplesData = { samples: this.#raw.sampleFrame(i) };
+          out.push(this.#frame(STREAM_SAMPLES, SAMPLES_VERSION, time, data));
+          break;
+        }
+      }
+    }
+  }
+
+  #frame(stream: string, version: number, time: number, data: unknown): FeatureFrame {
+    return { stream, version, time, span: this.#span, hop: this.#hop, data };
   }
 }

@@ -106,6 +106,11 @@ pub struct DspEngine {
     buffered: usize,
     /// Stream time (seconds) of `buffer[0]`.
     buffer_start_sec: f64,
+    /// Total samples pushed since the last reset (absolute).
+    pushed_samples: usize,
+    /// Absolute index one past the end of the furthest window analyzed — how
+    /// `flush` tells whether real samples remain uncovered by any frame.
+    covered_samples: usize,
 }
 
 impl DspEngine {
@@ -153,6 +158,8 @@ impl DspEngine {
             buffer,
             buffered: 0,
             buffer_start_sec: 0.0,
+            pushed_samples: 0,
+            covered_samples: 0,
         }
     }
 
@@ -167,17 +174,22 @@ impl DspEngine {
         self.ensure_capacity(self.buffered + samples.len());
         self.buffer[self.buffered..self.buffered + samples.len()].copy_from_slice(samples);
         self.buffered += samples.len();
+        self.pushed_samples += samples.len();
 
         let window_size = self.options.window_size;
         let hop_size = self.options.hop_size;
         let sample_rate = self.options.sample_rate;
 
         let mut frames = Vec::new();
+        // Absolute index of `buffer[0]` — anchors each window's coverage so the
+        // count survives the `copy_within` shift below.
+        let base = self.pushed_samples - self.buffered;
         let mut offset = 0;
         while self.buffered - offset >= window_size {
             let time = self.buffer_start_sec + offset as f64 / sample_rate;
             let frame = &self.buffer[offset..offset + window_size];
             self.analyze(frame, time, &mut frames);
+            self.covered_samples = base + offset + window_size;
             offset += hop_size;
         }
 
@@ -189,10 +201,34 @@ impl DspEngine {
         frames
     }
 
+    /// Drain the tail: emit a final frame for real samples left buffered short
+    /// of a full window (or a whole signal shorter than one window), zero-padded
+    /// up to `window_size` — real samples at the front, silence where the signal
+    /// ran out. Called at end of stream. Idempotent: a second `flush` drains
+    /// nothing, and a later `push` stays monotonic in time.
+    pub fn flush(&mut self) -> Vec<FeatureFrame> {
+        let mut frames = Vec::new();
+        if self.buffered > 0 && self.pushed_samples > self.covered_samples {
+            let window_size = self.options.window_size;
+            let sample_rate = self.options.sample_rate;
+            let mut padded = vec![0f32; window_size];
+            padded[..self.buffered].copy_from_slice(&self.buffer[..self.buffered]);
+            self.analyze(&padded, self.buffer_start_sec, &mut frames);
+            // Drained: advance the clock past it and leave nothing for a second
+            // flush to re-emit.
+            self.buffer_start_sec += self.buffered as f64 / sample_rate;
+            self.covered_samples = self.pushed_samples;
+            self.buffered = 0;
+        }
+        frames
+    }
+
     /// Clear buffered samples and reset stream time to zero.
     pub fn reset(&mut self) {
         self.buffered = 0;
         self.buffer_start_sec = 0.0;
+        self.pushed_samples = 0;
+        self.covered_samples = 0;
     }
 
     fn analyze(&self, frame: &[f32], time: f64, out: &mut Vec<FeatureFrame>) {
@@ -383,6 +419,69 @@ mod tests {
             assert!((e.rms - std::f64::consts::FRAC_1_SQRT_2).abs() < 1e-2);
             assert!((e.peak - 1.0).abs() < 1e-2);
         }
+    }
+
+    #[test]
+    fn flush_drains_a_tail_short_of_a_full_window() {
+        let mut engine = DspEngine::new(opts(1024, 512));
+        // 1024 + 300 samples: one window at offset 0, then 300 left over —
+        // under a full window, so push emits nothing more for them.
+        let pushed = engine.push(&sine(1000.0, 1324, 1.0));
+        assert_eq!(
+            pushed
+                .iter()
+                .filter(|f| f.stream == Stream::Envelope)
+                .count(),
+            1
+        );
+        let drained = engine.flush();
+        // One final frame per stream, timed at the leftover samples' start.
+        let streams: Vec<Stream> = drained.iter().map(|f| f.stream).collect();
+        assert_eq!(streams, [Stream::Spectrum, Stream::Peaks, Stream::Envelope]);
+        assert!((drained[0].time - 512.0 / SR).abs() < 1e-9);
+    }
+
+    #[test]
+    fn flush_emits_a_frame_for_a_signal_shorter_than_one_window() {
+        let mut engine = DspEngine::new(opts(1024, 512));
+        let pushed = engine.push(&sine(1000.0, 512, 1.0));
+        assert_eq!(pushed.len(), 0);
+        let drained = engine.flush();
+        assert_eq!(drained.len(), 3);
+        // Real samples sit at the front of the zero-padded window, so the tone
+        // still registers.
+        let spectrum = drained
+            .iter()
+            .find(|f| f.stream == Stream::Spectrum)
+            .unwrap();
+        if let FrameData::Spectrum(s) = &spectrum.data {
+            let max = s.magnitudes.iter().cloned().fold(0f32, f32::max);
+            assert!(max > 0.1, "max {max}");
+        }
+    }
+
+    #[test]
+    fn flush_is_a_no_op_when_the_tail_is_window_aligned() {
+        let mut engine = DspEngine::new(opts(1024, 512));
+        engine.push(&vec![0f32; 2048]); // windows at 0, 512, 1024
+        assert_eq!(engine.flush().len(), 0);
+    }
+
+    #[test]
+    fn flush_is_idempotent() {
+        let mut engine = DspEngine::new(opts(1024, 512));
+        engine.push(&sine(1000.0, 700, 1.0));
+        assert_eq!(engine.flush().len(), 3);
+        assert_eq!(engine.flush().len(), 0);
+    }
+
+    #[test]
+    fn reset_clears_the_drain_state() {
+        let mut engine = DspEngine::new(opts(1024, 512));
+        engine.push(&sine(1000.0, 700, 1.0));
+        engine.reset();
+        // Nothing buffered after reset, so nothing to drain.
+        assert_eq!(engine.flush().len(), 0);
     }
 
     #[test]

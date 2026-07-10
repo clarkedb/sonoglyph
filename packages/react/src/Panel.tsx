@@ -18,10 +18,12 @@ export function Panel({
 }) {
   return (
     <section
-      className={`panel flex min-w-0 flex-col rounded-lg border border-edge bg-panel px-3.5 py-3 ${className ?? ''}`}
+      className={`panel flex min-w-0 flex-col rounded-sm border border-edge bg-panel px-3.5 py-3 ${className ?? ''}`}
     >
       <header className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold tracking-[0.08em] text-heading uppercase">{title}</h2>
+        <h2 className="font-display text-sm font-medium tracking-[0.08em] text-heading uppercase">
+          {title}
+        </h2>
         <div className="flex flex-wrap items-center gap-2.5">{controls}</div>
       </header>
       <div className="flex-1">{children}</div>

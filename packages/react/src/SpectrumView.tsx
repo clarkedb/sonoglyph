@@ -4,7 +4,7 @@ import type { PeaksData, SpectrumData } from '@sonoglyph/core';
 import { useRef } from 'react';
 import { scaleCanvas, useAnimationFrame, useVizPalette } from './hooks.ts';
 
-const DEFAULT_CLASS = 'block h-[260px] w-full cursor-crosshair rounded-[5px] bg-canvas';
+const DEFAULT_CLASS = 'block h-[260px] w-full cursor-crosshair rounded-sm bg-canvas';
 const DB_FLOOR = -90;
 const toDb = (mag: number) => Math.max(DB_FLOOR, 20 * Math.log10(mag + 1e-9));
 

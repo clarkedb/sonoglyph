@@ -2,42 +2,58 @@
  * Shared Sonoglyph design tokens — the contract the @sonoglyph/react
  * components are styled against. Consuming apps import this
  * (`@import '@sonoglyph/react/theme.css'`) and may override any value.
- * Seeded from the playground's palette; the website keeps its own values
- * until the design languages converge (see docs/roadmap.md, Phase 4).
+ * Converged with the website's "instrument at night" palette (see
+ * website/app/globals.css, website/PRODUCT.md): drenched void + a single
+ * amber phosphor trace. The playground stays dark-only for now — the
+ * website's printed (light) variant is a separate, deferred convergence.
  */
 @theme {
-  --color-surface: #0f141b;
-  --color-panel: #161d27;
-  --color-canvas: #10161f;
-  --color-edge: #232d3b;
-  --color-edge-soft: #1c2530;
-  --color-control: #1f2937;
-  --color-control-edge: #374151;
-  --color-control-hover: #2b3a4e;
-  --color-ink: #e2e8f0;
-  --color-heading: #a0aec0;
-  --color-muted: #718096;
-  --color-faint: #5f6f85;
-  --color-soft: #8b98ab;
-  --color-accent: #4fd1c5;
-  --color-accent-dim: #234e52;
-  --color-danger: #fc8181;
+  --color-surface: oklch(0.16 0.015 250);
+  --color-panel: oklch(0.19 0.018 250);
+  --color-canvas: oklch(0.13 0.014 250);
+  --color-edge: oklch(0.32 0.02 250);
+  --color-edge-soft: oklch(0.24 0.018 250);
+  --color-control: oklch(0.22 0.02 250);
+  --color-control-edge: oklch(0.36 0.02 250);
+  --color-control-hover: oklch(0.27 0.02 250);
+  --color-ink: oklch(0.89 0.01 250);
+  --color-heading: oklch(0.8 0.015 250);
+  --color-muted: oklch(0.62 0.02 250);
+  --color-faint: oklch(0.5 0.02 250);
+  --color-soft: oklch(0.7 0.02 250);
+  --color-accent: oklch(0.8 0.14 75);
+  --color-accent-dim: oklch(0.28 0.05 75);
+  --color-danger: oklch(0.65 0.19 25);
+  --font-sans: 'Barlow', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
 /*
  * Canvas visualization colors. Not Tailwind utilities — the canvas views
  * read them via getComputedStyle (see useVizPalette) — so plain custom
  * properties. Overriding these re-themes the scope/spectrum without
- * touching component code.
+ * touching component code. One phosphor hue throughout (an oscilloscope
+ * has one trace color); peaks get a brighter highlight so they read as
+ * markers, not more signal.
  */
 :root {
-  --viz-axis: #2d3748;
-  --viz-trace: #4fd1c5;
-  --viz-guide: #2a3344;
-  --viz-guide-label: #4a5568;
-  --viz-grid: #1f2733;
-  --viz-spectrum: #63b3ed;
-  --viz-peak: #f6ad55;
-  --viz-crosshair: #718096;
-  --viz-readout: #e2e8f0;
+  --viz-axis: oklch(0.32 0.02 250);
+  --viz-trace: oklch(0.8 0.14 75);
+  --viz-guide: oklch(0.24 0.018 250);
+  --viz-guide-label: oklch(0.62 0.02 250);
+  --viz-grid: oklch(0.2 0.016 250);
+  --viz-spectrum: oklch(0.62 0.1 72);
+  --viz-peak: oklch(0.92 0.08 85);
+  --viz-crosshair: oklch(0.62 0.02 250);
+  --viz-readout: oklch(0.89 0.01 250);
+
+  /* Phosphor glow, for the moment a signal resolves into a glyph. */
+  --glow: 0 0 14px color-mix(in oklch, var(--color-accent) 40%, transparent);
+  --glow-soft: 0 0 22px color-mix(in oklch, var(--color-accent) 18%, transparent);
+}
+
+.glyph-glow {
+  box-shadow: var(--glow-soft);
+  text-shadow: var(--glow);
 }

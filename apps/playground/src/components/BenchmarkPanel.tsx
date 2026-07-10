@@ -144,7 +144,7 @@ export function BenchmarkPanel() {
           <p className="text-danger">The WASM engine isn’t built yet.</p>
           <p className="mt-1.5">
             Build it, then reload:{' '}
-            <code className="rounded bg-canvas px-1 py-0.5 font-mono text-[12px]">
+            <code className="rounded-sm bg-canvas px-1 py-0.5 font-mono text-[12px]">
               pnpm --filter @sonoglyph/dsp-wasm build:wasm
             </code>
           </p>
@@ -181,8 +181,8 @@ function BenchmarkResult({ result }: { result: Result }) {
   return (
     <div className="flex flex-col gap-3 text-[13px]">
       <div className="flex flex-col gap-2">
-        <Bar label="TypeScript" ms={tsMs} widthPct={(tsMs / max) * 100} color="bg-[#63b3ed]" />
-        <Bar label="WASM (Rust)" ms={wasmMs} widthPct={(wasmMs / max) * 100} color="bg-[#f6ad55]" />
+        <Bar label="TypeScript" ms={tsMs} widthPct={(tsMs / max) * 100} color="bg-soft" />
+        <Bar label="WASM (Rust)" ms={wasmMs} widthPct={(wasmMs / max) * 100} color="bg-accent" />
       </div>
       <p className="text-soft">
         <strong className="font-semibold text-heading">{verdict}</strong> over{' '}
@@ -210,7 +210,7 @@ function Bar({
   return (
     <div className="flex items-center gap-2.5">
       <span className="w-24 shrink-0 text-muted">{label}</span>
-      <div className="h-5 flex-1 overflow-hidden rounded bg-canvas">
+      <div className="h-5 flex-1 overflow-hidden rounded-sm bg-canvas">
         <div className={`h-full ${color}`} style={{ width: `${Math.max(widthPct, 2)}%` }} />
       </div>
       <span className="w-20 shrink-0 text-right font-mono text-[12px] text-soft">

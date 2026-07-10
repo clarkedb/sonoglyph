@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "syllables": ["S1"],
+      "gloss": "me / I",
+      "category": "pronoun"
+    },
+    {
+      "syllables": ["S2"],
+      "gloss": "you",
+      "category": "pronoun"
+    },
+    {
+      "syllables": ["S3"],
+      "gloss": "earthly, human in nature",
+      "category": "adjective",
+      "notes": "Bound root. Reduplicated (S3-S3) it nominalizes to 'human' — see that entry."
+    },
+    {
+      "syllables": ["S3", "S3"],
+      "gloss": "human, a person of Earth",
+      "category": "noun",
+      "notes": "Reduplication of a property root is the productive rule 'a being characterized by X' — compare Eridian (S4-S4)."
+    },
+    {
+      "syllables": ["S4"],
+      "gloss": "native, Eridian in nature",
+      "category": "adjective",
+      "notes": "Bound root. Reduplicated (S4-S4) it nominalizes to 'Eridian' — see that entry."
+    },
+    {
+      "syllables": ["S4", "S4"],
+      "gloss": "Eridian, a native of this world",
+      "category": "noun",
+      "notes": "Reduplication of a property root is the productive rule 'a being characterized by X' — compare human (S3-S3)."
+    },
+    {
+      "syllables": ["S5"],
+      "gloss": "good, fine, correct",
+      "category": "adjective",
+      "notes": "Adjacent scale degree to 'bad' (S6) — antonym pairs sit one degree apart."
+    },
+    {
+      "syllables": ["S6"],
+      "gloss": "bad, wrong, broken",
+      "category": "adjective",
+      "notes": "Adjacent scale degree to 'good' (S5) — antonym pairs sit one degree apart."
+    },
+    {
+      "syllables": ["S7"],
+      "gloss": "amazing! / to amaze",
+      "category": "interjection",
+      "notes": "Conventionally spoken at register +1 or +2 — see docs/eridian.md#register."
+    },
+    {
+      "syllables": ["S1", "S2"],
+      "gloss": "friend, ally",
+      "category": "noun",
+      "notes": "Compound of me (S1) + you (S2)."
+    },
+    {
+      "syllables": ["S3", "S6"],
+      "gloss": "to hear, to listen",
+      "category": "verb"
+    },
+    {
+      "syllables": ["S4", "S5"],
+      "gloss": "to go, to move",
+      "category": "verb"
+    },
+    {
+      "syllables": ["S4", "S6"],
+      "gloss": "to want, to need",
+      "category": "verb"
+    },
+    {
+      "syllables": ["S5", "S1"],
+      "gloss": "yes, affirmed",
+      "category": "interjection"
+    },
+    {
+      "syllables": ["S6", "S1"],
+      "gloss": "no, negative reply",
+      "category": "interjection",
+      "notes": "Distinct from the NEG particle, which negates a predicate rather than answering one."
+    },
+    {
+      "syllables": ["Q"],
+      "gloss": "a question / Question?",
+      "category": "particle",
+      "notes": "Doubles as the sentence-final question particle — see docs/eridian.md#grammar."
+    },
+    {
+      "syllables": ["NEG"],
+      "gloss": "not",
+      "category": "particle",
+      "notes": "Precedes the predicate it negates."
+    },
+    {
+      "syllables": ["BE"],
+      "gloss": "is / am / are",
+      "category": "particle",
+      "notes": "Copula, used only for noun-to-noun identity statements — adjectives and verbs need no copula."
+    },
+    {
+      "syllables": ["PST"],
+      "gloss": "-ed (past tense)",
+      "category": "particle",
+      "notes": "Tense suffix, attached directly after the verb as part of the same word — no other conjugation exists."
+    },
+    {
+      "syllables": ["FUT"],
+      "gloss": "will- (future tense)",
+      "category": "particle",
+      "notes": "Tense suffix, attached directly after the verb as part of the same word — no other conjugation exists."
+    },
+    {
+      "syllables": ["AND"],
+      "gloss": "and",
+      "category": "conjunction"
+    }
+  ]
+}

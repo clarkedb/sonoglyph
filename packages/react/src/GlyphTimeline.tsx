@@ -89,7 +89,7 @@ export function GlyphTimeline({
           {rowGlyphs.map((g, i) => (
             <span
               key={i}
-              className="dialed-symbol rounded-[5px] border border-accent bg-accent-dim px-2 py-[3px] text-[17px] font-bold"
+              className="dialed-symbol glyph-glow rounded-sm border border-accent bg-accent-dim px-2 py-[3px] text-[17px] font-bold"
             >
               {g.symbol}
             </span>

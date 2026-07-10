@@ -160,8 +160,8 @@ function DtmfInput({ controller, run }: { controller: PlaygroundController; run:
           </p>
         </div>
       </div>
-      <details className="phone-howto mt-2.5 rounded-md border border-dashed border-edge px-2.5 py-2 text-[12.5px] text-soft">
-        <summary className="cursor-pointer text-[#9fb0c7]">Use a real phone as the input</summary>
+      <details className="phone-howto mt-2.5 rounded-sm border border-dashed border-edge px-2.5 py-2 text-[12.5px] text-soft">
+        <summary className="cursor-pointer text-soft">Use a real phone as the input</summary>
         <p className="mt-1.5 leading-normal">
           Start the microphone above, then open your smartphone’s Phone app and bring up its keypad
           — no call needed. Turn the media volume up and take the phone off silent, hold it near
@@ -170,11 +170,11 @@ function DtmfInput({ controller, run }: { controller: PlaygroundController; run:
         </p>
         <ul className="mt-1.5 list-disc pl-[18px] leading-normal">
           <li>
-            <strong className="font-semibold text-[#b8c4d6]">iPhone:</strong> keypad taps play tones
+            <strong className="font-semibold text-heading">iPhone:</strong> keypad taps play tones
             out of the box; if you hear nothing, flip the ring/silent switch to ring.
           </li>
           <li>
-            <strong className="font-semibold text-[#b8c4d6]">Android:</strong> if taps are silent,
+            <strong className="font-semibold text-heading">Android:</strong> if taps are silent,
             enable Settings → Sound & vibration → “Dial pad tones” (wording varies by vendor).
           </li>
         </ul>
@@ -250,8 +250,9 @@ function MorseInput({ controller, run }: { controller: PlaygroundController; run
         </button>
         {keying && (
           <span className="text-[12.5px] text-faint">
-            Hold <kbd className="rounded border border-edge px-1 font-mono text-[11px]">Space</kbd>{' '}
-            to sound a tone — short tap = dot, long hold = dash.
+            Hold{' '}
+            <kbd className="rounded-sm border border-edge px-1 font-mono text-[11px]">Space</kbd> to
+            sound a tone — short tap = dot, long hold = dash.
           </span>
         )}
       </div>

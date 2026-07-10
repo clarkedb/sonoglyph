@@ -128,8 +128,12 @@ Panels, each with a short embedded explainer (this is where educational content 
 
 Two surfaces, one component library. The panels the playground grew are
 extracted to `@sonoglyph/react` (done, PR #50) so both consumers render one
-source of truth; the token contract (`@sonoglyph/react/theme.css`) lets each
-keep its own look until they converge.
+source of truth, styled through the token contract (`@sonoglyph/react/theme.css`).
+The playground has converged onto the website's dark "instrument at night"
+palette (void + phosphor amber, Barlow/Barlow Condensed/Fragment Mono,
+matching favicon) — the website itself doesn't consume `@sonoglyph/react`
+yet, so the printed (light) theme and a runtime toggle in the playground
+remain deferred until that embed happens.
 
 - **Next.js site (`website/`) at `sonoglyph.dev`**: the teaching/marketing
   surface — project introduction, the **Learn** section, focused hosted

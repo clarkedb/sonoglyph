@@ -14,10 +14,10 @@ export function ExampleShell({ slug, children }: { slug: string; children: React
     <main className="mx-auto max-w-3xl px-6">
       <section className="pt-16 sm:pt-20">
         <a
-          href="/learn"
+          href="/examples"
           className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
         >
-          ← the manual
+          ← examples
         </a>
         <p className="mt-6 font-mono text-[13px] text-phosphor-dim">interactive example</p>
         <h1 className="mt-3 font-display text-4xl font-semibold tracking-wide text-ink sm:text-5xl">

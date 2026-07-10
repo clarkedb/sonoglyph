@@ -88,6 +88,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 learn
               </a>
               <a
+                href="/examples"
+                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
+              >
+                examples
+              </a>
+              <a
                 href={REPO_URL}
                 className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
               >

@@ -167,8 +167,28 @@ impl RustFftBackend {
             size >= 2 && (size & (size - 1)) == 0,
             "FFT size must be a power of two >= 2, got {size}"
         );
-        let fft = FftPlanner::<f32>::new().plan_fft_forward(size);
+        let fft = Self::plan(size);
         Self { size, fft }
+    }
+
+    /// `FftPlanner` (the generic planner) never selects rustfft's WASM SIMD
+    /// butterflies — those only exist behind the separate
+    /// [`rustfft::FftPlannerWasmSimd`] type, so it has to be reached for
+    /// explicitly on wasm32. `::new()` fails if the binary wasn't built with
+    /// `target-feature=+simd128` (wired via the workspace's
+    /// `.cargo/config.toml`), in which case the generic planner is a scalar
+    /// fallback rather than a hard error.
+    #[cfg(target_arch = "wasm32")]
+    fn plan(size: usize) -> Arc<dyn rustfft::Fft<f32>> {
+        match rustfft::FftPlannerWasmSimd::<f32>::new() {
+            Ok(mut planner) => planner.plan_fft_forward(size),
+            Err(()) => FftPlanner::<f32>::new().plan_fft_forward(size),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn plan(size: usize) -> Arc<dyn rustfft::Fft<f32>> {
+        FftPlanner::<f32>::new().plan_fft_forward(size)
     }
 }
 

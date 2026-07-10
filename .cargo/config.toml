@@ -1,0 +1,8 @@
+# wasm32 builds (both `cargo build --target wasm32-unknown-unknown` and
+# wasm-pack, which shells out to cargo from the crate directory — cargo
+# walks up to find this file regardless of cwd) opt into WASM SIMD. This is
+# where rustfft's browser speedup comes from (issue #65); without it the
+# wasm32 build falls back to scalar codegen and only modestly beats V8's JIT.
+# Native targets are unaffected: rustflags here are scoped to wasm32-unknown-unknown.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

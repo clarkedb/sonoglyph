@@ -102,6 +102,9 @@ interface Tracking<P> {
   startTime: number;
   /** Analysis window length of the frames, in seconds. */
   span: number;
+  /** Seconds between frames of this stream — constant, captured so a
+   * `flush` with no frame in hand can still size the run's duration. */
+  hop: number;
   /** Frames covering the run, including absorbed dropouts/blips — the
    * basis for duration. */
   frameCount: number;
@@ -176,7 +179,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
         // reset() synchronously, and it must see the run as finished.
         const finished = this.tracking;
         this.tracking = null;
-        this.finish(finished, hop);
+        this.finish(finished);
       }
     }
 
@@ -185,6 +188,7 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
         symbol: match.symbol,
         startTime: frame.time,
         span: frame.span,
+        hop,
         frameCount: 1,
         gapFrames: 0,
         matches: [match],
@@ -197,13 +201,24 @@ export class SegmentingRecognizer<P = unknown, G = unknown> implements Recognize
     return () => this.listeners.delete(cb);
   }
 
+  flush(): void {
+    // End of stream: no trailing gap will ever arrive to close the current
+    // run, so commit it now. Trailing non-matching frames sit in gapFrames
+    // (never credited to frameCount), so the duration covers only the
+    // symbol itself — exactly as a real gap would have ended it.
+    if (!this.tracking) return;
+    const finished = this.tracking;
+    this.tracking = null;
+    this.finish(finished);
+  }
+
   reset(): void {
     this.tracking = null;
   }
 
   /** Emit a glyph for a finished run, if it lasted long enough. */
-  private finish(t: Tracking<P>, hop: number): void {
-    const duration = t.frameCount * hop - t.span / 2;
+  private finish(t: Tracking<P>): void {
+    const duration = t.frameCount * t.hop - t.span / 2;
     if (duration < this.segmentation.minDurationMs / 1000) return;
 
     let confidence = 0;

@@ -146,6 +146,15 @@ export interface DspEngine {
    * Frames are returned in time order, grouped per analysis hop.
    */
   push(samples: Float32Array): FeatureFrame[];
+  /**
+   * Drain the tail: emit any final frame(s) for samples buffered but never
+   * long enough to complete a full analysis window. Called at end of stream
+   * (a file runs out, a recording is truncated), so the last fraction of a
+   * signal — or a signal shorter than one window — still produces frames
+   * instead of being silently stranded in the buffer. Returns the drained
+   * frames, in time order, and leaves nothing further to drain.
+   */
+  flush(): FeatureFrame[];
   /** Clear buffered samples and reset stream time to zero. */
   reset(): void;
 }
@@ -179,6 +188,15 @@ export interface RecognizerPlugin {
   process(frame: FeatureFrame): void;
   /** Subscribe to emitted glyphs. */
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe;
+  /**
+   * End of stream: emit any glyph still in flight. A recognizer normally
+   * emits on release — it waits for silence (or a different symbol) to
+   * prove a run ended. When the stream simply stops, there is no such
+   * frame, so the final run would be dropped; `flush` commits it. Optional:
+   * a stateless recognizer needs nothing here. Not a substitute for a gap —
+   * real silence between symbols is still what separates them.
+   */
+  flush?(): void;
   /** Clear internal state (e.g. when the audio source changes). */
   reset(): void;
 }
@@ -201,6 +219,15 @@ export interface Translator<M = unknown> {
   push(glyph: Glyph): void;
   /** Subscribe to emitted meaning. */
   onMeaning(cb: (meaning: M) => void): Unsubscribe;
+  /**
+   * End of stream: close any partial meaning still accumulating. Like a
+   * recognizer, a translator often resolves a unit only when the next glyph
+   * proves the previous one ended (the final Morse letter has no following
+   * element); `flush` commits that trailing partial. Optional; called by
+   * the driver after the pipeline's own flush, so any last-moment glyph has
+   * already arrived.
+   */
+  flush?(): void;
   /** Clear internal state (e.g. when the audio source changes). */
   reset(): void;
 }

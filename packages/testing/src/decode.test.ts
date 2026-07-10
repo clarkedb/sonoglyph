@@ -59,4 +59,19 @@ describe('decode', () => {
     });
     expect(symbols(glyphs)).toBe('B');
   });
+
+  it('recovers the final glyph when the signal ends mid-tone (flush)', () => {
+    // No trailing silence at all: the tone runs to the last sample, so on
+    // release the recognizer is still tracking. decode's end-of-stream
+    // flush is what emits the glyph instead of dropping it.
+    const signal = toneSequence(
+      [{ tones: [{ frequencyHz: 440, amplitude: 0.5 }], durationMs: 200 }],
+      {
+        leadInMs: 0,
+        gapMs: 0,
+        tailMs: 0,
+      },
+    );
+    expect(symbols(decode(signal, beepDetector()))).toBe('B');
+  });
 });

@@ -46,6 +46,9 @@ export function decode(
   for (let i = 0; i < signal.length; i += chunkSize) {
     pipeline.push(signal.subarray(i, Math.min(i + chunkSize, signal.length)));
   }
+  // The signal ended: flush so a run still open at the last sample emits,
+  // instead of relying on the caller to pad trailing silence.
+  pipeline.flush();
   pipeline.dispose();
   return glyphs;
 }

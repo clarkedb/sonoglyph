@@ -141,6 +141,46 @@ describe('SegmentingRecognizer', () => {
     expect(glyphs).toHaveLength(0);
   });
 
+  it('flush emits a run the stream ended before any gap could close', () => {
+    const { recognizer, glyphs } = makeRecognizer();
+    // A full run with no trailing gap: on release the machine would still
+    // be tracking, so without flush the glyph is lost.
+    feed(recognizer, RUN);
+    expect(glyphs).toHaveLength(0);
+    recognizer.flush!();
+    expect(glyphs).toHaveLength(1);
+    expect(glyphs[0]!.symbol).toBe('A');
+    // Same duration a real gap would have reported — trailing silence adds
+    // nothing to the run.
+    expect(glyphs[0]!.duration).toBeCloseTo(10 * HOP - SPAN / 2);
+  });
+
+  it('flush still honors minDurationMs', () => {
+    const { recognizer, glyphs } = makeRecognizer();
+    feed(recognizer, Array<string>(5).fill('A')); // ~32 ms, under the 40 ms floor
+    recognizer.flush!();
+    expect(glyphs).toHaveLength(0);
+  });
+
+  it('flush does not credit trailing sub-threshold gap frames to the run', () => {
+    const { recognizer, glyphs } = makeRecognizer();
+    // Two gap frames (~21 ms) is under the 25 ms threshold, so the run is
+    // still open at flush — but the silence is not part of the symbol.
+    feed(recognizer, [...RUN, null, null]);
+    recognizer.flush!();
+    expect(glyphs[0]!.duration).toBeCloseTo(10 * HOP - SPAN / 2);
+  });
+
+  it('flush is a no-op with nothing in flight, and idempotent after emitting', () => {
+    const { recognizer, glyphs } = makeRecognizer();
+    recognizer.flush!();
+    expect(glyphs).toHaveLength(0);
+    feed(recognizer, RUN);
+    recognizer.flush!();
+    recognizer.flush!();
+    expect(glyphs).toHaveLength(1);
+  });
+
   it('unsubscribing stops delivery', () => {
     const { recognizer } = makeRecognizer();
     const received: Glyph[] = [];

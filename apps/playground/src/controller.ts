@@ -497,24 +497,22 @@ export class PlaygroundController {
 
     await this.bufferSource?.stop();
     this.setSampleRate(sampleRate);
-    // Pad with silence on both sides. Trailing: recognizers detect the end
-    // of a tone by seeing silent frames, and when a buffer runs dry no
-    // frames flow at all — stream time freezes and an open press would
-    // absorb the next one. The pad must outlast the analysis window (tone
-    // energy leaks into every window that overlaps it) plus the
-    // recognizer's gap threshold. Leading: noise-adaptive recognizers
-    // (Goertzel) calibrate their floors on what they hear first — a
-    // buffer that opens mid-tone reads as "the room sounds like this",
-    // the way any real signal is preceded by a moment of ambience.
+    // Lead with silence: noise-adaptive recognizers (Goertzel) calibrate
+    // their floors on what they hear first — a buffer that opens mid-tone
+    // reads as "the room sounds like this", the way any real signal is
+    // preceded by a moment of ambience. No trailing pad: the end of the
+    // buffer is a stream end, and pipeline.flush() (in onEnded) drains the
+    // engine and closes any open press — a pad would only stand in for it.
     const leadSec = (2 * this.engineOptions.windowSize) / sampleRate;
-    const padSec = Math.max(0.3, (2 * this.engineOptions.windowSize) / sampleRate);
     const lead = Math.round(leadSec * sampleRate);
-    const padded = new Float32Array(lead + samples.length + Math.round(padSec * sampleRate));
+    const padded = new Float32Array(lead + samples.length);
     padded.set(samples, lead);
     this.bufferSource = new BufferSource(padded, sampleRate);
     this.bufferSource.onEnded(() => {
-      // End of input: close the Morse transcript's final letter, which no
-      // following element can (the transmission is over).
+      // End of input: drain the engine and flush the recognizers so a press
+      // or key-down still open at the last sample emits, then close the
+      // Morse transcript's final letter, which no following element can.
+      this.pipeline?.flush();
       this.morseTranslator.flush();
       if (this.status.mode === 'buffer') {
         this.status.mode = 'idle';

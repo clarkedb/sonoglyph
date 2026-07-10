@@ -20,9 +20,10 @@ export interface ToneSequenceOptions {
   /** Leading silence, so the first tone doesn't start at sample zero. */
   leadInMs?: number;
   /**
-   * Trailing silence. Recognizers detect the end of a tone by seeing
-   * silent frames, so the tail must outlast the analysis window plus the
-   * recognizer's gap threshold — otherwise the last glyph never emits.
+   * Trailing silence. Defaults to none: `decode` flushes the pipeline at
+   * end of stream, so the last tone's glyph emits without a synthetic tail.
+   * Set it only to model real trailing silence — e.g. a gap the recognizer
+   * must *detect* rather than one flush stands in for.
    */
   tailMs?: number;
 }
@@ -32,7 +33,7 @@ export const DEFAULT_SEQUENCE_OPTIONS: Required<ToneSequenceOptions> = {
   toneMs: 80,
   gapMs: 80,
   leadInMs: 100,
-  tailMs: 200,
+  tailMs: 0,
 };
 
 /**

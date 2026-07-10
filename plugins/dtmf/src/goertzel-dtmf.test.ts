@@ -131,7 +131,7 @@ describe('GoertzelDtmfRecognizer (end to end on synthetic audio)', () => {
           durationMs: 100,
         },
       ],
-      { sampleRate: SAMPLE_RATE, tailMs: 300 },
+      { sampleRate: SAMPLE_RATE },
     );
     expect(decodeGoertzel(signal)).toHaveLength(0);
   });

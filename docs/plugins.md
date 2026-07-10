@@ -300,6 +300,7 @@ export interface Translator<M = unknown> {
   readonly id: string;
   push(glyph: Glyph): void; // consume the glyph stream
   onMeaning(cb: (meaning: M) => void): Unsubscribe;
+  flush?(): void; // end of stream: close a trailing partial (optional)
   reset(): void;
 }
 ```
@@ -313,7 +314,8 @@ element reports its length in units, so the gaps size cleanly into
 intra-letter (~1 unit), letter (~3), and word (~7) boundaries. Letters
 and words are never glyphs; they exist only as meaning. One gotcha it
 surfaces: the final letter has no following element to end it, so a
-translator wants an end-of-stream `flush()` that its driver calls.
+translator implements the optional end-of-stream `flush()` that its
+driver calls after the pipeline's own flush.
 
 ## Conventions checklist
 

@@ -38,7 +38,7 @@ function morseSignal(text: string, opts: KeyOptions = {}): Float32Array {
       gapMs: gap * unitMs,
     });
   }
-  let signal = toneSequence(steps, { sampleRate: SAMPLE_RATE, tailMs: 6 * unitMs });
+  let signal = toneSequence(steps, { sampleRate: SAMPLE_RATE });
   if (noiseAmplitude > 0) {
     signal = mix(signal, whiteNoise(signal.length / SAMPLE_RATE, SAMPLE_RATE, noiseAmplitude));
   }
@@ -91,10 +91,7 @@ describe('MorseRecognizer (elements off the envelope stream)', () => {
   it('ignores blips shorter than a viable dot', () => {
     const signal = toneSequence(
       [{ tones: [{ frequencyHz: 600, amplitude: 0.5 }], durationMs: 15 }],
-      {
-        sampleRate: SAMPLE_RATE,
-        tailMs: 500,
-      },
+      { sampleRate: SAMPLE_RATE },
     );
     expect(decodeElements(signal)).toHaveLength(0);
   });
@@ -166,7 +163,7 @@ describe('MorseTextTranslator (the Meaning layer: elements → letters → words
       durationMs: 80,
       gapMs: 80,
     }));
-    const signal = toneSequence(steps, { sampleRate: SAMPLE_RATE, tailMs: 500 });
+    const signal = toneSequence(steps, { sampleRate: SAMPLE_RATE });
     const { text, letters } = transcribe(signal);
     expect(text).toBe('?');
     expect(letters[0]!.code).toBe('........');

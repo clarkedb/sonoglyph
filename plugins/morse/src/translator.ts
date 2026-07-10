@@ -42,9 +42,9 @@ const EMPTY: MorseTranscript = { text: '', letters: [] };
  * the letter continues (~1 unit), ends (~3), or a new word begins (~7).
  *
  * A letter only closes once the *next* element proves the gap — so the
- * final letter of a transmission needs `flush()`, called when the input
- * ends. (Making end-of-stream a first-class pipeline signal is tracked
- * separately; here it is a method the driver calls.)
+ * final letter of a transmission needs `flush()`, the `Translator`
+ * contract's end-of-stream hook, which the driver calls after the
+ * pipeline's own flush has delivered any last element glyph.
  */
 export class MorseTextTranslator implements Translator<MorseTranscript> {
   readonly id = 'morse-text';

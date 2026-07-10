@@ -1,0 +1,125 @@
+# DSP benchmark gate: fails a PR when either engine gets measurably slower than
+# its committed baseline (bench-baselines/), mirroring how golden DSP vectors
+# are pinned and re-blessed. Covers all three engines — Rust (criterion), the
+# TypeScript reference (vitest bench), and the WASM build (vitest bench against
+# the wasm-pack output).
+#
+# One job runs all three so the result lands as a single PR comment and one
+# `tolerable regression` label overrides the whole gate. The per-engine bench
+# steps `continue-on-error` and the compare scripts always exit 0, so the
+# report step always posts — even if a bench crashes, it shows up as missing.
+# The final Gate step is what actually passes/fails the check.
+#
+# Re-bless intentionally-moved numbers with `pnpm bench:bless` (see
+# scripts/bench/bless.sh) and commit the bench-baselines/ diff.
+name: Bench
+
+on:
+  push:
+    branches: [main]
+    paths: &bench-paths
+      - 'crates/**'
+      - 'packages/dsp/**'
+      - 'packages/dsp-wasm/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'bench-baselines/**'
+      - 'scripts/bench/**'
+      - '.github/workflows/bench.yml'
+  pull_request:
+    paths: *bench-paths
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # Needed to post/update the results comment on the PR.
+      pull-requests: write
+    env:
+      # 15% headroom absorbs GitHub-hosted-runner noise; tighten once real
+      # variance is observed. Read by scripts/bench/lib.ts.
+      BENCH_THRESHOLD: '15'
+      # Escape hatch: label the PR `tolerable regression` to merge past the gate
+      # for an intended, reviewed slowdown that isn't worth re-blessing.
+      TOLERATE: ${{ contains(github.event.pull_request.labels.*.name, 'tolerable regression') }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # Provisions the toolchain from rust-toolchain.toml on first invocation.
+      - run: rustup show
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa # v0.4.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Rust bench
+        continue-on-error: true
+        run: |
+          cargo bench --bench engine
+          node scripts/bench/collect-rust.ts target/criterion > current-rust.json
+          node scripts/bench/gate.ts rust current-rust.json
+
+      - name: TS bench
+        continue-on-error: true
+        run: |
+          pnpm exec vitest bench --run --root . packages/dsp/bench --outputJson=current-ts-raw.json
+          node scripts/bench/collect-vitest.ts ts current-ts-raw.json > current-ts.json
+          node scripts/bench/gate.ts ts current-ts.json
+
+      - name: WASM bench
+        continue-on-error: true
+        run: |
+          pnpm --filter @sonoglyph/dsp-wasm build:wasm
+          pnpm exec vitest bench --run --root . packages/dsp-wasm/bench --outputJson=current-wasm-raw.json
+          node scripts/bench/collect-vitest.ts wasm current-wasm-raw.json > current-wasm.json
+          node scripts/bench/gate.ts wasm current-wasm.json
+
+      - name: Report
+        id: report
+        if: always()
+        run: node scripts/bench/report.ts bench-results
+
+      - name: Comment on PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- sonoglyph-bench-report -->'
+          jq -Rs '{body: .}' bench-report.md > payload.json
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq "map(select(.body | startswith(\"$marker\"))) | .[0].id // empty")
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" --input payload.json > /dev/null
+          else
+            gh api -X POST "repos/$REPO/issues/$PR/comments" --input payload.json > /dev/null
+          fi
+
+      - name: Gate
+        if: always()
+        run: |
+          if [ "${{ steps.report.outputs.regression }}" != "true" ]; then
+            echo "No regressions beyond ${BENCH_THRESHOLD}% threshold."
+            exit 0
+          fi
+          if [ "$TOLERATE" = "true" ]; then
+            echo "::warning::Regression present, but the 'tolerable regression' label overrides the gate."
+            exit 0
+          fi
+          echo "::error::DSP benchmark regression beyond ${BENCH_THRESHOLD}%. See the PR comment; re-bless with 'pnpm bench:bless' if intended, or add the 'tolerable regression' label."
+          exit 1

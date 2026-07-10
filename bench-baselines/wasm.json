@@ -1,0 +1,9 @@
+{
+  "engine": "wasm",
+  "metric": "median",
+  "unit": "ms",
+  "benchmarks": {
+    "engine/push-1s/rustfft": 6.786,
+    "goertzel/power-2048": 0.00599
+  }
+}

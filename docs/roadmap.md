@@ -120,6 +120,7 @@ Panels, each with a short embedded explainer (this is where educational content 
 - **The TypeScript engine is kept**, permanently, as the readable reference implementation. Shared golden test vectors (`packages/dsp/src/golden`) cross-validate the two engines — the strongest correctness story DSP code can have.
 - Playground benchmark panel: TS vs. WASM side by side, as an educational feature ("this is why WASM exists" — and, honestly, why it sometimes doesn't for small boundary-crossing probes). ✓ landed.
 - Native `cargo test` + proptest (engine invariants: frame count/times, any-split chunking-invariance, reset) + criterion benches (radix-2 vs rustfft) — landed; thin WASM-boundary smoke tests in the browser CI job.
+- **Performance regression gate** (`bench.yml`, [issue #66](https://github.com/clarkedb/sonoglyph/issues/66)) — landed. All three engines are benched headlessly (Rust via criterion, TS and WASM via `vitest bench`) and compared against committed `bench-baselines/` snapshots; a PR fails when any benchmark is >15% slower than baseline. Because performance baselines are hardware-specific, they're CI-measured (the gate comment embeds the exact values to re-bless from); `pnpm bench:bless` regenerates the format locally. Override a reviewed slowdown with the `tolerable regression` label. Results post as a single PR comment.
 - WASM becomes the default engine in the browser; TS remains the fallback and the teaching text.
 
 ## Phase 4 — Education & website

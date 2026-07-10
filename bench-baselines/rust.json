@@ -1,0 +1,16 @@
+{
+  "engine": "rust",
+  "metric": "median",
+  "unit": "ns",
+  "benchmarks": {
+    "engine_push-1s/radix2": 4168286.9,
+    "engine_push-1s/rustfft": 1430445.0,
+    "fft_magnitudes/radix2/2048": 41512.0,
+    "fft_magnitudes/radix2/512": 9346.4,
+    "fft_magnitudes/radix2/8192": 203527.0,
+    "fft_magnitudes/rustfft/2048": 11555.3,
+    "fft_magnitudes/rustfft/512": 2931.8,
+    "fft_magnitudes/rustfft/8192": 48685.7,
+    "goertzel_power-2048": 5688.0
+  }
+}

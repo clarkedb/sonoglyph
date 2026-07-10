@@ -50,6 +50,9 @@ importers:
       '@sonoglyph/dsp':
         specifier: workspace:*
         version: link:../../packages/dsp
+      '@sonoglyph/dsp-wasm':
+        specifier: workspace:*
+        version: link:../../packages/dsp-wasm
       '@sonoglyph/plugin-dtmf':
         specifier: workspace:*
         version: link:../../plugins/dtmf

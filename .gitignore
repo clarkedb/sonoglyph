@@ -4,6 +4,9 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 
+# mprocs (`pnpm dev`) diagnostic log — written at repo root on crash.
+mprocs.log
+
 # Next.js (website/)
 .next/
 out/

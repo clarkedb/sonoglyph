@@ -7,7 +7,8 @@ source of truth; update them when a change invalidates them.
 
 Fresh clone or worktree: `pnpm run bootstrap` (verifies the pinned Node
 version, installs deps and git hooks). Everyday commands: `pnpm lint`,
-`pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm dev` (playground).
+`pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm dev` (all dev servers —
+playground and website — in an `mprocs` TUI; see `mprocs.yaml` to add more).
 Node version is pinned in `.nvmrc`; pnpm in `package.json#packageManager`.
 
 The Rust core (`crates/`, the WASM DSP engine — see the roadmap's Phase 3) is

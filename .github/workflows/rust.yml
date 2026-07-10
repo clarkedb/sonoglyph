@@ -1,7 +1,13 @@
-# The Rust job lives in its own workflow with path filters so TS-only changes
-# don't pay the Rust toolchain cost, and Rust-only changes don't spin up the
-# Node pipeline. rustup is preinstalled on the runner and provisions the exact
+# Rust lives in its own workflow with path filters so TS-only changes don't pay
+# the Rust toolchain cost, and Rust-only changes don't spin up the Node
+# pipeline. rustup is preinstalled on the runner and provisions the exact
 # toolchain (channel + wasm32 target + components) from rust-toolchain.toml.
+#
+# The checks run as parallel jobs (fast fail-in-place, clear signal), mirroring
+# ci.yml's lint/test/build split. `test` runs the cross-validation suite on the
+# host; `wasm` doesn't run anything — it compile-checks the wasm32 target so the
+# crate stays WASM-compatible ahead of the wasm-pack boundary. The `rust` job
+# aggregates them, so branch protection can require one check.
 name: Rust
 
 on:
@@ -24,21 +30,53 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  rust:
-    name: fmt / clippy / test / wasm
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      # Provisions the toolchain from rust-toolchain.toml on first invocation.
+      - run: rustup show
+      # No build cache: rustfmt parses, it doesn't compile.
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      # Installs the toolchain declared in rust-toolchain.toml (channel,
-      # wasm32-unknown-unknown target, rustfmt + clippy) on first invocation.
       - run: rustup show
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-      - name: Format
-        run: cargo fmt --all --check
-      - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
-      - name: Test
-        run: cargo test
-      - name: WASM target builds
-        run: cargo build --target wasm32-unknown-unknown
+      - run: cargo clippy --all-targets -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - run: rustup show
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: cargo test
+
+  wasm:
+    name: WASM build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - run: rustup show
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: cargo build --target wasm32-unknown-unknown
+
+  # Aggregation gate: green only when every check above passed, so `main`
+  # branch protection can require just this one job (as it does with `build`).
+  rust:
+    name: Rust
+    needs: [fmt, clippy, test, wasm]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - run: echo "fmt, clippy, test, and wasm build all passed"

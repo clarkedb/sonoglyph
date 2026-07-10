@@ -156,7 +156,7 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 
 ### Phase 3 — Rust jobs
 
-- `rust.yml` (separate from `ci.yml`, so the Rust job stays independent of the TS pipeline's `build` gate): rustup provisions the toolchain from `rust-toolchain.toml` → `cargo fmt --check` → `cargo clippy -- -D warnings` → `cargo test` → wasm build. A browser smoke test against the WASM engine follows once the boundary exists.
+- `rust.yml` (separate from `ci.yml`, so the Rust checks stay independent of the TS pipeline's `build` gate): rustup provisions the toolchain from `rust-toolchain.toml`, then parallel jobs run `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, and a `wasm32` compile-check; a `rust` aggregation job gates them so branch protection requires one check (mirroring `build` in `ci.yml`). A browser smoke test against the WASM engine follows once the boundary exists.
 - Path filters (`crates/**`, `Cargo.*`, `rust-toolchain.toml`, the workflow itself) so TS-only changes don't pay the Rust toolchain cost and vice versa. Cargo cache via `Swatinem/rust-cache`.
 
 ### Phase 4 — deployment

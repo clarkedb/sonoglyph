@@ -1,24 +1,12 @@
 @import 'tailwindcss';
+@import '@sonoglyph/react/theme.css';
 
-@theme {
-  --color-surface: #0f141b;
-  --color-panel: #161d27;
-  --color-canvas: #10161f;
-  --color-edge: #232d3b;
-  --color-edge-soft: #1c2530;
-  --color-control: #1f2937;
-  --color-control-edge: #374151;
-  --color-control-hover: #2b3a4e;
-  --color-ink: #e2e8f0;
-  --color-heading: #a0aec0;
-  --color-muted: #718096;
-  --color-faint: #5f6f85;
-  --color-soft: #8b98ab;
-  --color-accent: #4fd1c5;
-  --color-accent-dim: #234e52;
-  --color-danger: #fc8181;
-}
+/* Scan the shared component package for the utility classes it uses, so
+ * Tailwind doesn't purge them (node_modules isn't auto-scanned). */
+@source '../../../packages/react/src';
 
+/* App-level chrome: the design tokens themselves come from the shared
+ * theme.css imported above. */
 @layer base {
   body {
     @apply bg-surface font-sans text-sm text-ink;

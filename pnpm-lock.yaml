@@ -59,6 +59,9 @@ importers:
       '@sonoglyph/plugin-morse':
         specifier: workspace:*
         version: link:../../plugins/morse
+      '@sonoglyph/react':
+        specifier: workspace:*
+        version: link:../../packages/react
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -110,6 +113,19 @@ importers:
       '@sonoglyph/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/react:
+    dependencies:
+      '@sonoglyph/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.17
+      react:
+        specifier: ^19.0.0
+        version: 19.2.7
 
   packages/testing:
     dependencies:

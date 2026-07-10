@@ -16,6 +16,7 @@
     "@sonoglyph/dsp-wasm": "workspace:*",
     "@sonoglyph/plugin-dtmf": "workspace:*",
     "@sonoglyph/plugin-morse": "workspace:*",
+    "@sonoglyph/react": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

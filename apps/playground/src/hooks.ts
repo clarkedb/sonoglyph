@@ -1,5 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { PlaygroundController } from './controller.ts';
+
+// Canvas/animation helpers now live in @sonoglyph/react; the controller
+// wiring below is playground-specific and stays here.
 
 export const ControllerContext = createContext<PlaygroundController | null>(null);
 
@@ -15,43 +18,4 @@ export function useControllerTick(): number {
   const [tick, setTick] = useState(0);
   useEffect(() => controller.subscribe(() => setTick((t) => t + 1)), [controller]);
   return tick;
-}
-
-/** Run `draw` every animation frame (for canvas panels that read the
- * controller directly instead of going through React state). */
-export function useAnimationFrame(draw: () => void): void {
-  const drawRef = useRef(draw);
-  useEffect(() => {
-    drawRef.current = draw;
-  });
-  useEffect(() => {
-    let handle = 0;
-    const loop = () => {
-      // A throwing draw callback must not kill the loop — otherwise one bad
-      // frame freezes the panel until it remounts. Log and keep scheduling.
-      try {
-        drawRef.current();
-      } catch (err) {
-        console.error('useAnimationFrame draw callback threw', err);
-      }
-      handle = requestAnimationFrame(loop);
-    };
-    handle = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(handle);
-  }, []);
-}
-
-/** Size a canvas to its CSS box × devicePixelRatio; returns the 2D context. */
-export function scaleCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D | null {
-  const dpr = window.devicePixelRatio || 1;
-  const { clientWidth, clientHeight } = canvas;
-  const width = Math.round(clientWidth * dpr);
-  const height = Math.round(clientHeight * dpr);
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
-  }
-  const ctx = canvas.getContext('2d');
-  ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
-  return ctx;
 }

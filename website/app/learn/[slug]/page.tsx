@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ARTICLES, getArticle, ISSUE_URL } from '../articles';
+import { ARTICLES, getArticle } from '../articles';
+import { CONTENT } from '../content';
 
 /** Prerender every known chapter; an unknown slug 404s. */
 export function generateStaticParams() {
@@ -22,6 +23,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
   if (!article) notFound();
 
   const index = ARTICLES.findIndex((a) => a.slug === article.slug);
+  const Body = CONTENT[article.slug];
+  if (!Body) notFound();
+  const prev = ARTICLES[index - 1];
+  const next = ARTICLES[index + 1];
 
   return (
     <main className="mx-auto max-w-2xl px-6">
@@ -40,23 +45,34 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         </h1>
         <p className="mt-4 text-lg leading-relaxed text-ink-dim">{article.blurb}</p>
 
-        {/* Stub: prose and the embedded interactive land with issue #52. */}
-        <div className="graph-grid mt-10 rounded-sm border border-line bg-panel/60 p-8 text-center">
-          <p className="font-mono text-sm text-ink">✎ this chapter is being written</p>
-          <p className="mx-auto mt-2 max-w-[48ch] text-sm leading-relaxed text-ink-dim">
-            It will carry the explanation and a live interactive built from{' '}
-            <code className="rounded-sm border border-line bg-panel px-1.5 py-0.5 text-[0.85em]">
-              @sonoglyph/react
-            </code>
-            .{' '}
-            <a
-              className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
-              href={ISSUE_URL}
-            >
-              Track it on GitHub.
-            </a>
-          </p>
+        <div className="article-prose mt-8">
+          <Body />
         </div>
+
+        {/* Chapter turn: the manual reads front to back. */}
+        <nav
+          aria-label="Chapters"
+          className="mt-16 flex justify-between gap-6 border-t border-line pt-5 font-mono text-xs"
+        >
+          {prev ? (
+            <a
+              href={`/learn/${prev.slug}`}
+              className="text-ink-dim transition-colors hover:text-ink"
+            >
+              ← {String(index).padStart(2, '0')} {prev.title}
+            </a>
+          ) : (
+            <span />
+          )}
+          {next && (
+            <a
+              href={`/learn/${next.slug}`}
+              className="text-right text-ink-dim transition-colors hover:text-ink"
+            >
+              {String(index + 2).padStart(2, '0')} {next.title} →
+            </a>
+          )}
+        </nav>
       </article>
     </main>
   );

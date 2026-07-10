@@ -12,11 +12,13 @@
   color-scheme: dark;
   --void: oklch(0.16 0.015 250);
   --panel: oklch(0.19 0.018 250);
+  --canvas: oklch(0.13 0.014 250);
   --ink: oklch(0.89 0.01 250);
   --ink-dim: oklch(0.71 0.02 250);
   --line: oklch(0.32 0.02 250);
   --phosphor: oklch(0.8 0.14 75);
   --phosphor-dim: oklch(0.62 0.1 72);
+  --danger: oklch(0.65 0.19 25);
   --grid-minor: color-mix(in oklch, var(--line) 30%, transparent);
   --grid-major: color-mix(in oklch, var(--line) 60%, transparent);
   --glow: 0 0 14px color-mix(in oklch, var(--phosphor) 40%, transparent);
@@ -28,15 +30,39 @@
   color-scheme: light;
   --void: oklch(0.97 0.004 250);
   --panel: oklch(0.94 0.006 250);
+  --canvas: oklch(0.99 0.002 250);
   --ink: oklch(0.26 0.02 250);
   --ink-dim: oklch(0.46 0.02 250);
   --line: oklch(0.83 0.012 250);
   --phosphor: oklch(0.53 0.13 65);
   --phosphor-dim: oklch(0.62 0.11 65);
+  --danger: oklch(0.5 0.19 25);
   --grid-minor: color-mix(in oklch, var(--line) 45%, transparent);
   --grid-major: color-mix(in oklch, var(--line) 85%, transparent);
   --glow: none;
   --glow-soft: none;
+}
+
+/*
+ * @sonoglyph/react token contract, mapped onto the site's palette (issue
+ * #52's theming reconciliation). The package's own theme.css carries the
+ * playground's dark-only values; here every contract name resolves to a
+ * site variable instead, so the embedded views follow data-theme — light
+ * mode included — without touching component code. Values only: the
+ * component classes (bg-panel, border-edge, text-accent, …) are generated
+ * by the @theme block below, and the canvas palette (--viz-*) is re-read
+ * by useVizPalette whenever data-theme flips.
+ */
+:root {
+  --viz-axis: var(--line);
+  --viz-trace: var(--phosphor);
+  --viz-guide: var(--grid-major);
+  --viz-guide-label: var(--ink-dim);
+  --viz-grid: var(--grid-minor);
+  --viz-spectrum: var(--phosphor-dim);
+  --viz-peak: color-mix(in oklch, var(--phosphor) 55%, var(--ink));
+  --viz-crosshair: var(--ink-dim);
+  --viz-readout: var(--ink);
 }
 
 @theme inline {
@@ -47,12 +73,31 @@
   --color-line: var(--line);
   --color-phosphor: var(--phosphor);
   --color-phosphor-dim: var(--phosphor-dim);
+  --color-danger: var(--danger);
+  /* @sonoglyph/react contract names (see the mapping note above). */
+  --color-surface: var(--void);
+  --color-canvas: var(--canvas);
+  --color-edge: var(--line);
+  --color-edge-soft: color-mix(in oklch, var(--line) 50%, var(--void));
+  --color-control: color-mix(in oklch, var(--panel) 70%, var(--line));
+  --color-control-edge: color-mix(in oklch, var(--line) 88%, var(--ink));
+  --color-control-hover: color-mix(in oklch, var(--panel) 45%, var(--line));
+  --color-heading: color-mix(in oklch, var(--ink) 60%, var(--ink-dim));
+  --color-muted: var(--ink-dim);
+  --color-soft: color-mix(in oklch, var(--ink) 45%, var(--ink-dim));
+  --color-faint: color-mix(in oklch, var(--ink-dim) 60%, var(--line));
+  --color-accent: var(--phosphor);
+  --color-accent-dim: color-mix(in oklch, var(--phosphor) 22%, var(--void));
   --font-sans: var(--font-barlow), 'Helvetica Neue', Arial, sans-serif;
   --font-display: var(--font-condensed), 'Arial Narrow', sans-serif;
   --font-mono: var(--font-fragment), ui-monospace, 'SF Mono', Menlo, monospace;
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* Embedded @sonoglyph/react components are compiled from source; Tailwind
+ * must scan them or their utility classes disappear from the build. */
+@source '../../packages/react/src';
 
 html {
   scroll-behavior: smooth;
@@ -204,4 +249,97 @@ p {
   .anim-idle {
     opacity: 0.65;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Learn articles: manual typography. Chapters are TSX, but their prose */
+/* is bare HTML under .article-prose so the text reads as text.         */
+/* ------------------------------------------------------------------ */
+
+.article-prose {
+  line-height: 1.7;
+}
+
+.article-prose > p {
+  margin-top: 1.1em;
+  max-width: 68ch;
+}
+
+.article-prose > h2 {
+  margin-top: 2.6em;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.article-prose > h2 + p {
+  margin-top: 0.8em;
+}
+
+.article-prose strong {
+  font-weight: 600;
+  color: var(--phosphor);
+}
+
+.article-prose em {
+  font-style: italic;
+}
+
+.article-prose code {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel);
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.article-prose a {
+  color: var(--phosphor);
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 150ms ease;
+}
+
+.article-prose a:hover {
+  text-decoration-color: var(--phosphor);
+}
+
+.article-prose > ul {
+  margin-top: 1.1em;
+  max-width: 66ch;
+  list-style: none;
+  padding-left: 1.4em;
+}
+
+.article-prose > ul li {
+  margin-top: 0.5em;
+}
+
+.article-prose > ul li::before {
+  content: '·';
+  color: var(--phosphor-dim);
+  display: inline-block;
+  width: 1.4em;
+  margin-left: -1.4em;
+}
+
+/* Aside: a marginal note in the manual's voice — drafting annotations. */
+.article-prose .aside {
+  margin-top: 1.4em;
+  max-width: 62ch;
+  border-left: 2px solid var(--phosphor-dim);
+  padding-left: 1em;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+}
+
+/* Native <meter>, used by the embedded GlyphTimeline's confidence cells. */
+meter {
+  height: 0.65rem;
+  width: 3.75rem;
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ARTICLES, EXAMPLES, ISSUE_URL } from './articles';
+import { ARTICLES, EXAMPLES } from './articles';
 
 export const metadata: Metadata = {
   title: 'Learn',
@@ -54,7 +54,7 @@ export default function LearnIndex() {
         </ol>
       </section>
 
-      {/* Hosted examples — forward reference; not yet built. */}
+      {/* Hosted examples — focused demos, routed under /examples. */}
       <section className="mt-16">
         <h2 className="font-display text-2xl font-medium tracking-wide text-ink uppercase">
           Interactive examples
@@ -71,24 +71,19 @@ export default function LearnIndex() {
         </p>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {EXAMPLES.map((example) => (
-            <div key={example.title} className="rounded-sm border border-line bg-panel p-4">
-              <h3 className="font-mono text-[13px] text-ink">{example.title}</h3>
+            <a
+              key={example.slug}
+              href={`/examples/${example.slug}`}
+              className="group rounded-sm border border-line bg-panel p-4 transition-colors hover:border-phosphor-dim"
+            >
+              <h3 className="font-mono text-[13px] text-ink transition-colors group-hover:text-phosphor">
+                {example.title} <span aria-hidden>→</span>
+              </h3>
               <p className="mt-1.5 text-sm leading-relaxed text-ink-dim">{example.blurb}</p>
-            </div>
+            </a>
           ))}
         </div>
       </section>
-
-      <p className="mt-14 font-mono text-xs leading-relaxed text-ink-dim">
-        the chapters are being written —{' '}
-        <a
-          className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
-          href={ISSUE_URL}
-        >
-          follow along on GitHub
-        </a>
-        .
-      </p>
     </main>
   );
 }

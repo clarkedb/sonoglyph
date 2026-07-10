@@ -2,8 +2,7 @@
  * The Learn section's content registry — the single source of truth for the
  * index, the article routes, and their metadata. Articles are a deliberate
  * sequence (the index numbers them), promoted from the playground panels'
- * embedded explainers. Prose + the interactive component for each is tracked
- * in the build-out issue (see ISSUE_URL); today each slug renders a stub.
+ * embedded explainers; each chapter's body lives in ./content/<slug>.tsx.
  */
 export interface LearnArticle {
   slug: string;
@@ -68,17 +67,26 @@ export const ARTICLES: LearnArticle[] = [
   },
 ];
 
-/** Focused single-purpose demos planned for the site (smaller than the full
- * playground at play.sonoglyph.dev). Listed on the index; not yet routed. */
-export const EXAMPLES: { title: string; blurb: string }[] = [
-  { title: 'DTMF decoder', blurb: 'Press a key or feed a tone; watch it resolve to a digit.' },
-  { title: 'Morse decoder', blurb: 'Key a message by hand and read the letters as they close.' },
-  { title: 'Tone playground', blurb: 'Generate arbitrary tones and watch the spectrum respond.' },
+/** Focused single-purpose demos hosted in the site (smaller than the full
+ * playground at play.sonoglyph.dev), routed under /examples. */
+export const EXAMPLES: { slug: string; title: string; blurb: string }[] = [
+  {
+    slug: 'dtmf',
+    title: 'DTMF decoder',
+    blurb: 'Press a key or feed a tone; watch it resolve to a digit.',
+  },
+  {
+    slug: 'morse',
+    title: 'Morse decoder',
+    blurb: 'Key a message by hand and read the letters as they close.',
+  },
+  {
+    slug: 'tone',
+    title: 'Tone playground',
+    blurb: 'Generate arbitrary tones and watch the spectrum respond.',
+  },
 ];
 
 export function getArticle(slug: string): LearnArticle | undefined {
   return ARTICLES.find((article) => article.slug === slug);
 }
-
-/** Where the article prose and interactive components are being built. */
-export const ISSUE_URL = 'https://github.com/clarkedb/sonoglyph/issues/52';

@@ -10,7 +10,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { goertzelMagnitude as tsMagnitude, goertzelPower as tsPower, sine } from '@sonoglyph/dsp';
+import {
+  goertzelMagnitude as tsMagnitude,
+  goertzelPower as tsPower,
+  sine,
+  tones,
+  TsDspEngine,
+} from '@sonoglyph/dsp';
+import type { SpectrumData } from '@sonoglyph/core';
 import type * as DspWasm from './index.ts';
 
 const WASM_PATH = fileURLToPath(new URL('../pkg/sonoglyph_dsp_bg.wasm', import.meta.url));
@@ -56,5 +63,38 @@ describe.skipIf(!built)('@sonoglyph/dsp-wasm ↔ @sonoglyph/dsp reference', () =
       tsPower(samples, frequencyHz, SR),
       9,
     );
+  });
+
+  it('streaming engine spectrum matches TsDspEngine', () => {
+    // One DTMF-"1" window through both engines; the spectra must agree.
+    const windowSize = 2048;
+    const signal = tones(
+      [
+        { frequencyHz: 697, amplitude: 0.5 },
+        { frequencyHz: 1209, amplitude: 0.5 },
+      ],
+      windowSize / SR,
+      SR,
+    );
+
+    const ts = new TsDspEngine({ sampleRate: SR, windowSize, hopSize: windowSize });
+    const tsSpectrum = ts.push(signal).find((f) => f.stream === 'spectrum')!.data as SpectrumData;
+
+    const engine = new wasm.WasmDspEngine({ sampleRate: SR, windowSize, hopSize: windowSize });
+    try {
+      const count = engine.push(signal);
+      expect(count).toBe(3); // spectrum, peaks, envelope
+      const spectrumIndex = Array.from({ length: count }, (_, i) => i).find(
+        (i) => engine.frameStream(i) === 0,
+      )!;
+      const wasmMags = engine.spectrumMagnitudes(spectrumIndex);
+
+      expect(wasmMags.length).toBe(tsSpectrum.magnitudes.length);
+      for (let k = 0; k < wasmMags.length; k++) {
+        expect(Math.abs(wasmMags[k]! - tsSpectrum.magnitudes[k]!)).toBeLessThanOrEqual(1e-5);
+      }
+    } finally {
+      engine.free();
+    }
   });
 });

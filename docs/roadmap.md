@@ -111,11 +111,13 @@ Panels, each with a short embedded explainer (this is where educational content 
 2. Native targets get prioritized: CLI tools, Tauri desktop, Raspberry Pi/embedded.
 3. The MVP is stable and it's time for the Rust learning arc on its own merits.
 
+**Landed so far:** the Cargo workspace and pinned toolchain (`rust-toolchain.toml`), `crates/sonoglyph-dsp` with the Goertzel primitive ported and cross-validated against the golden vectors, a path-filtered `rust.yml` CI job, and the WASM boundary — `@sonoglyph/dsp-wasm` (wasm-bindgen exports built with wasm-pack `--target web`), with a test asserting the WASM primitives match the TS reference. Approach: Rust is **additive, never required** — the TS engine stays the default, and the WASM package is skipped by the default TS gates so TS-only contributors need no Rust toolchain — until WASM becomes the default engine.
+
 **Plan:**
 
-- `crates/sonoglyph-dsp` implementing the same `DspEngine` contract; `crates/sonoglyph-fft` as the FFT abstraction (rustfft first, swappable per the original spec).
-- wasm-bindgen + WASM build integrated into the Vite pipeline; boundary designed to avoid per-frame buffer copies.
-- **The TypeScript engine is kept**, permanently, as the readable reference implementation. Shared golden test vectors cross-validate the two engines — the strongest correctness story DSP code can have.
+- `crates/sonoglyph-dsp` implementing the same `DspEngine` contract (the streaming engine is the next port after the standalone primitives); `crates/sonoglyph-fft` as the FFT abstraction (rustfft first, swappable per the original spec).
+- wasm-bindgen + WASM build via wasm-pack into a `@sonoglyph/dsp-wasm` pnpm package (done for the primitives); still to come: consuming it from the Vite pipeline/playground, and a zero-copy boundary (a view into pre-allocated WASM memory) for the engine's hot loop rather than the per-call `Float32Array` copy the primitives use.
+- **The TypeScript engine is kept**, permanently, as the readable reference implementation. Shared golden test vectors (`packages/dsp/src/golden`) cross-validate the two engines — the strongest correctness story DSP code can have.
 - Playground benchmark panel: TS vs. WASM side by side, as an educational feature ("this is why WASM exists").
 - Native `cargo test` + proptest + criterion benches; thin WASM-boundary smoke tests in the browser CI job.
 - WASM becomes the default engine in the browser; TS remains the fallback and the teaching text.
@@ -154,8 +156,8 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 
 ### Phase 3 — Rust jobs
 
-- Add to `ci.yml`: Rust toolchain (with cargo cache) → `cargo fmt --check` → `cargo clippy -- -D warnings` → `cargo test` → wasm build → browser smoke test against the WASM engine.
-- Path filters so TS-only changes don't pay the Rust toolchain cost and vice versa.
+- `rust.yml` (separate from `ci.yml`, so the Rust checks stay independent of the TS pipeline's `build` gate): rustup provisions the toolchain from `rust-toolchain.toml`, then parallel jobs run `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, and a `wasm32` compile-check; a `rust` aggregation job gates them so branch protection requires one check (mirroring `build` in `ci.yml`). A browser smoke test against the WASM engine follows once the boundary exists.
+- Path filters (`crates/**`, `Cargo.*`, `rust-toolchain.toml`, the workflow itself) so TS-only changes don't pay the Rust toolchain cost and vice versa. Cargo cache via `Swatinem/rust-cache`.
 
 ### Phase 4 — deployment
 

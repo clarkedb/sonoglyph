@@ -1,0 +1,17 @@
+# Cargo workspace for the Rust crates (the WASM DSP engine).
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/clarkedb/sonoglyph"
+
+# Fully optimize release and bench builds; the shipped WASM must not be a
+# debug build.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

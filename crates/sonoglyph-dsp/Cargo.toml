@@ -1,0 +1,18 @@
+[package]
+name = "sonoglyph-dsp"
+description = "Sonoglyph DSP core (Rust): the engine and primitives, cross-validated against the TypeScript reference"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+# `cdylib` is what wasm-bindgen compiles to WASM later; `rlib` keeps the crate
+# usable as a normal Rust dependency (native tests, benches, future CLI).
+crate-type = ["cdylib", "rlib"]
+
+# wasm-bindgen is a wasm32-only dependency: native builds, tests, and clippy
+# never pull it. The binding layer in src/wasm.rs is compiled by the wasm
+# build (cargo build --target wasm32) and by wasm-pack.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"

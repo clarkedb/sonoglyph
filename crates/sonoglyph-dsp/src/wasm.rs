@@ -125,6 +125,14 @@ impl WasmDspEngine {
         self.frames.len()
     }
 
+    /// Drain the engine's tail at end of stream; returns the number of frames
+    /// produced (readable via the getters until the next push, exactly like
+    /// [`WasmDspEngine::push`]).
+    pub fn flush(&mut self) -> usize {
+        self.frames = self.engine.flush();
+        self.frames.len()
+    }
+
     pub fn reset(&mut self) {
         self.engine.reset();
         self.frames.clear();
@@ -151,6 +159,38 @@ impl WasmDspEngine {
     pub fn spectrum_magnitudes(&self, i: usize) -> Vec<f32> {
         match &self.frames[i].data {
             FrameData::Spectrum(s) => s.magnitudes.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    /// Peaks of frame `i` as a flat `Float64Array` of `[frequencyHz, magnitude,
+    /// bin]` triples, strongest first (empty if the frame is not a peaks frame).
+    /// Flattened rather than marshalled as structs to avoid a serde dependency;
+    /// the TS wrapper reassembles `SpectralPeak[]`. `bin` is an integer carried
+    /// as `f64` — exact for any realistic FFT size.
+    #[wasm_bindgen(js_name = peakData)]
+    pub fn peak_data(&self, i: usize) -> Vec<f64> {
+        match &self.frames[i].data {
+            FrameData::Peaks(p) => {
+                let mut out = Vec::with_capacity(p.peaks.len() * 3);
+                for peak in &p.peaks {
+                    out.push(peak.frequency_hz);
+                    out.push(peak.magnitude);
+                    out.push(peak.bin as f64);
+                }
+                out
+            }
+            _ => Vec::new(),
+        }
+    }
+
+    /// Raw analysis samples of frame `i` as a fresh `Float32Array` — a copy the
+    /// consumer may hold across pushes (empty if the frame is not a samples
+    /// frame).
+    #[wasm_bindgen(js_name = sampleFrame)]
+    pub fn sample_frame(&self, i: usize) -> Vec<f32> {
+        match &self.frames[i].data {
+            FrameData::Samples(s) => s.samples.clone(),
             _ => Vec::new(),
         }
     }

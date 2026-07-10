@@ -23,8 +23,14 @@ export function goertzelPower(): number {
 export const STREAM = { spectrum: 0, peaks: 1, envelope: 2, samples: 3 } as const;
 
 // Panels only construct the engine after initDspWasm() resolves, which it never
-// does here — so this constructor is unreachable, but throws for safety.
+// does here — so these constructors are unreachable, but throw for safety.
 export class WasmDspEngine {
+  constructor() {
+    throw new Error(HINT);
+  }
+}
+
+export class WasmDspEngineAdapter {
   constructor() {
     throw new Error(HINT);
   }

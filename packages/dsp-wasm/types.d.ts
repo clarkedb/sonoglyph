@@ -8,6 +8,8 @@
  * surface is tiny and stable).
  */
 
+import type { DspEngine, DspEngineOptions, FeatureFrame } from '@sonoglyph/core';
+
 /**
  * Instantiate the WASM module (idempotent). Await once before calling any
  * primitive. In the browser, call with no argument; in Node/tests, pass the
@@ -58,12 +60,34 @@ export declare class WasmDspEngine {
   get inputCapacity(): number;
   /** Process up to `inputCapacity` samples; returns the frame count. */
   push(samples: Float32Array): number;
+  /** Drain the tail at end of stream; returns the frame count. */
+  flush(): number;
   reset(): void;
   frameCount(): number;
   frameStream(i: number): number;
+  frameTime(i: number): number;
   spectrumMagnitudes(i: number): Float32Array;
+  /** Peaks of frame `i` as flat `[frequencyHz, magnitude, bin]` triples. */
+  peakData(i: number): Float64Array;
+  /** Raw analysis samples of frame `i` (a copy). */
+  sampleFrame(i: number): Float32Array;
   envelopeRms(i: number): number;
   envelopePeak(i: number): number;
+  /** Release the underlying WASM object. */
+  free(): void;
+}
+
+/**
+ * The WASM engine behind the full `@sonoglyph/core` `DspEngine` contract — a
+ * drop-in for `TsDspEngine` in a `Pipeline`. Defaults to the fast `rustfft`
+ * backend. Owns a WASM object: call `free()` when replacing or discarding it.
+ */
+export declare class WasmDspEngineAdapter implements DspEngine {
+  constructor(options?: Partial<DspEngineOptions>, backend?: WasmFftBackend);
+  readonly options: Readonly<DspEngineOptions>;
+  push(samples: Float32Array): FeatureFrame[];
+  flush(): FeatureFrame[];
+  reset(): void;
   /** Release the underlying WASM object. */
   free(): void;
 }

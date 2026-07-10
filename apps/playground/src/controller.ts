@@ -1,4 +1,5 @@
 import type {
+  DspEngine,
   DspEngineOptions,
   FeatureFrame,
   EnvelopeData,
@@ -19,6 +20,7 @@ import {
   tones,
   TsDspEngine,
 } from '@sonoglyph/dsp';
+import { initDspWasm, WasmDspEngineAdapter } from '@sonoglyph/dsp-wasm';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
 import type { MorseElementPayload, MorseTranscript } from '@sonoglyph/plugin-morse';
@@ -39,6 +41,15 @@ export type SignalSystem = 'dtmf' | 'morse';
 /** Within DTMF, which recognizer(s) feed the glyph timeline. */
 export type DecoderChoice = 'fft' | 'goertzel' | 'both';
 
+/** Which DSP engine implementation runs the live pipeline: the readable
+ * TypeScript reference, or the Rust core compiled to WebAssembly. */
+export type EngineChoice = 'ts' | 'wasm';
+
+/** Whether the WASM engine can be selected yet. `init` while `initDspWasm()`
+ * is in flight; `unavailable` if it never built (the playground's stub) or
+ * failed to load — in which case only TS is offered. */
+export type WasmState = 'init' | 'ready' | 'unavailable';
+
 export interface PlaygroundStatus {
   mode: InputMode;
   sampleRate: number;
@@ -46,6 +57,8 @@ export interface PlaygroundStatus {
   window: WindowName;
   system: SignalSystem;
   decoders: DecoderChoice;
+  engine: EngineChoice;
+  wasmState: WasmState;
   samplesReceived: number;
   chunksReceived: number;
 }
@@ -73,6 +86,13 @@ export class PlaygroundController {
   private readonly morseTranslator = new MorseTextTranslator();
   private system: SignalSystem = 'dtmf';
   private decoders: DecoderChoice = 'fft';
+  /** TS is the default — the readable reference and the teaching text. WASM is
+   * opt-in, and only once `initDspWasm()` has resolved (see `wasmState`). */
+  private engine: EngineChoice = 'ts';
+  private wasmState: WasmState = 'init';
+  /** True once the controller is torn down, so the async WASM-init callback
+   * doesn't notify a dead controller after an HMR reload. */
+  private disposed = false;
   private frameUnsub: Unsubscribe | null = null;
   private glyphUnsub: Unsubscribe | null = null;
   private errorUnsub: Unsubscribe | null = null;
@@ -120,6 +140,8 @@ export class PlaygroundController {
     window: DEFAULT_ENGINE_OPTIONS.window,
     system: 'dtmf',
     decoders: 'fft',
+    engine: 'ts',
+    wasmState: 'init',
     samplesReceived: 0,
     chunksReceived: 0,
   };
@@ -134,6 +156,21 @@ export class PlaygroundController {
       this.notify();
     });
     this.pipeline = this.buildPipeline();
+    // Load the WASM engine in the background so the toggle can offer it. Until
+    // it resolves the UI keeps WASM disabled; if it rejects (the stub, or a
+    // load failure) WASM stays unavailable and only TS is offered. Idempotent
+    // and memoized, so an HMR-rebuilt controller resolves it instantly.
+    initDspWasm().then(
+      () => this.setWasmState('ready'),
+      () => this.setWasmState('unavailable'),
+    );
+  }
+
+  private setWasmState(state: WasmState): void {
+    if (this.disposed) return;
+    this.wasmState = state;
+    this.status.wasmState = state;
+    this.notify();
   }
 
   /** Subscribe to coarse changes (glyphs, mode, options). */
@@ -163,7 +200,10 @@ export class PlaygroundController {
     this.errorUnsub?.();
     // Detach the old pipeline from the long-lived recognizers (it would
     // otherwise keep dead listeners alive) and clear press state — a new
-    // engine means a new time base.
+    // engine means a new time base. Free the outgoing engine first: the WASM
+    // adapter owns a WASM object that dispose() doesn't reclaim (the TS engine
+    // has no such handle, so freeEngine is a no-op for it).
+    freeEngine(this.pipeline?.engine);
     this.pipeline?.dispose();
     this.fftRecognizer.reset();
     this.goertzelRecognizer.reset();
@@ -184,7 +224,7 @@ export class PlaygroundController {
         ...recognizers.flatMap((r) => r.metadata.requiredStreams),
       ]),
     ];
-    const pipeline = new Pipeline(new TsDspEngine({ ...this.engineOptions, streams }));
+    const pipeline = new Pipeline(this.createEngine(streams));
     for (const recognizer of recognizers) pipeline.addPlugin(recognizer);
     this.frameUnsub = pipeline.onFrame((frame) => {
       if (frame.stream === STREAM_SPECTRUM) {
@@ -221,7 +261,28 @@ export class PlaygroundController {
     this.status.window = this.engineOptions.window;
     this.status.system = this.system;
     this.status.decoders = this.decoders;
+    this.status.engine = this.engine;
     return pipeline;
+  }
+
+  /**
+   * Build the DSP engine for the current `engine` choice. WASM only when it's
+   * both selected and ready; if constructing it throws (an unexpected load
+   * failure), fall back to TS and mark WASM unavailable so the app degrades
+   * gracefully instead of running with no engine.
+   */
+  private createEngine(streams: string[]): DspEngine {
+    const options: DspEngineOptions = { ...this.engineOptions, streams };
+    if (this.engine === 'wasm' && this.wasmState === 'ready') {
+      try {
+        return new WasmDspEngineAdapter(options);
+      } catch {
+        this.engine = 'ts';
+        this.wasmState = 'unavailable';
+        this.status.wasmState = 'unavailable';
+      }
+    }
+    return new TsDspEngine(options);
   }
 
   /**
@@ -253,6 +314,20 @@ export class PlaygroundController {
   setDecoders(choice: DecoderChoice): void {
     if (choice === this.decoders) return;
     this.decoders = choice;
+    this.pipeline = this.buildPipeline();
+    this.notify();
+  }
+
+  /**
+   * Swap the DSP engine implementation running the live pipeline (TypeScript
+   * reference vs. Rust/WASM). Glyph history survives — the point is to watch
+   * the same input decode identically through either engine. Selecting `wasm`
+   * before it's ready is ignored; the UI keeps that option disabled until then.
+   */
+  setEngine(choice: EngineChoice): void {
+    if (choice === this.engine) return;
+    if (choice === 'wasm' && this.wasmState !== 'ready') return;
+    this.engine = choice;
     this.pipeline = this.buildPipeline();
     this.notify();
   }
@@ -469,10 +544,14 @@ export class PlaygroundController {
    * Idempotent — the AudioContext close is guarded against a double call.
    */
   async dispose(): Promise<void> {
+    this.disposed = true;
     await this.stop();
     this.frameUnsub?.();
     this.glyphUnsub?.();
     this.errorUnsub?.();
+    // Free the WASM engine (if any) before dropping the pipeline; dispose()
+    // only detaches plugins, so the WASM object would otherwise leak.
+    freeEngine(this.pipeline?.engine);
     this.pipeline?.dispose();
     this.pipeline = null;
     const ctx = this.audioContext;
@@ -573,6 +652,14 @@ export class PlaygroundController {
     this.morseTranslator.reset();
     this.notify();
   }
+}
+
+/** Free an engine that owns native resources (the WASM adapter). The TS engine
+ * has no `free`, so this is a no-op for it — hence the structural check rather
+ * than an `instanceof`, which would couple the controller to the WASM class. */
+function freeEngine(engine: DspEngine | null | undefined): void {
+  const freeable = engine as { free?: () => void } | null | undefined;
+  if (typeof freeable?.free === 'function') freeable.free();
 }
 
 /** 2 ms raised-cosine fade at both ends to avoid audible clicks. */

@@ -1,0 +1,12 @@
+[package]
+name = "sonoglyph-dsp"
+description = "Sonoglyph DSP core (Rust): the engine and primitives, cross-validated against the TypeScript reference"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+# `cdylib` is what wasm-bindgen compiles to WASM later; `rlib` keeps the crate
+# usable as a normal Rust dependency (native tests, benches, future CLI).
+crate-type = ["cdylib", "rlib"]

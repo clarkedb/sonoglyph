@@ -1,0 +1,6 @@
+# rustup provisions this toolchain — channel, wasm32 target, and components —
+# on the first cargo invocation, locally and in CI.
+[toolchain]
+channel = "1.97.0"
+targets = ["wasm32-unknown-unknown"]
+components = ["rustfmt", "clippy"]

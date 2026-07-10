@@ -4,11 +4,24 @@
 # TypeScript reference (vitest bench), and the WASM build (vitest bench against
 # the wasm-pack output).
 #
-# One job runs all three so the result lands as a single PR comment and one
-# `tolerable regression` label overrides the whole gate. The per-engine bench
-# steps `continue-on-error` and the compare scripts always exit 0, so the
-# report step always posts — even if a bench crashes, it shows up as missing.
-# The final Gate step is what actually passes/fails the check.
+# The `run` job does all three so the result lands as a single PR comment and
+# one `tolerable regression` label overrides the whole gate. Its per-engine
+# bench steps `continue-on-error` and the compare scripts always exit 0, so
+# the report step always posts — even if a bench crashes, it shows up as
+# missing.
+#
+# Path filtering happens inside the `changes` job (dorny/paths-filter), not on
+# the workflow's `on:` trigger. A trigger-level `paths:` filter means the
+# workflow — and the "Bench" required-status-check context — never reports
+# *anything* for a PR that doesn't touch these paths, so a required check
+# gets stuck "Expected" forever and blocks merge. Filtering in-job instead
+# means the workflow always runs, and `run` plus the `bench` aggregate job
+# (the one branch protection requires) are both honestly skipped when
+# irrelevant — GitHub treats a skipped required check as satisfied, so this
+# unblocks merge without faking a green pass. `bench`'s `if: always() && ...`
+# only overrides the default skip-on-skipped-dependency behavior when
+# bench-relevant changes did land, so a real regression (or a crashed `run`
+# job) still fails `bench` rather than being masked as a skip.
 #
 # Re-bless intentionally-moved numbers with `pnpm bench:bless` (see
 # scripts/bench/bless.sh) and commit the bench-baselines/ diff.
@@ -17,18 +30,7 @@ name: Bench
 on:
   push:
     branches: [main]
-    paths: &bench-paths
-      - 'crates/**'
-      - 'packages/dsp/**'
-      - 'packages/dsp-wasm/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - 'bench-baselines/**'
-      - 'scripts/bench/**'
-      - '.github/workflows/bench.yml'
   pull_request:
-    paths: *bench-paths
 
 permissions:
   contents: read
@@ -38,8 +40,33 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  bench:
-    name: Bench
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      bench: ${{ steps.filter.outputs.bench }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            bench:
+              - 'crates/**'
+              - 'packages/dsp/**'
+              - 'packages/dsp-wasm/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'rust-toolchain.toml'
+              - 'bench-baselines/**'
+              - 'scripts/bench/**'
+              - '.github/workflows/bench.yml'
+
+  run:
+    name: Bench run
+    needs: changes
+    if: needs.changes.outputs.bench == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -50,9 +77,8 @@ jobs:
       # 15% headroom absorbs GitHub-hosted-runner noise; tighten once real
       # variance is observed. Read by scripts/bench/lib.ts.
       BENCH_THRESHOLD: '15'
-      # Escape hatch: label the PR `tolerable regression` to merge past the gate
-      # for an intended, reviewed slowdown that isn't worth re-blessing.
-      TOLERATE: ${{ contains(github.event.pull_request.labels.*.name, 'tolerable regression') }}
+    outputs:
+      regression: ${{ steps.report.outputs.regression }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Provisions the toolchain from rust-toolchain.toml on first invocation.
@@ -110,10 +136,34 @@ jobs:
             gh api -X POST "repos/$REPO/issues/$PR/comments" --input payload.json > /dev/null
           fi
 
+  # Aggregation gate: this is the context branch protection requires. It's
+  # honestly *skipped* (not a manufactured pass) when there are no
+  # bench-relevant changes — GitHub treats a skipped required check as
+  # satisfied, so branch protection isn't blocked, but the PR's checks list
+  # still shows "didn't run" rather than a misleading green checkmark.
+  # `always()` overrides the default "skip if a dependency was skipped or
+  # failed" behavior *only* when bench-relevant changes did land, so a real
+  # regression (or a crashed `run` job) still fails this job instead of
+  # being masked as a skip.
+  bench:
+    name: Bench
+    needs: [changes, run]
+    if: always() && needs.changes.outputs.bench == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BENCH_THRESHOLD: '15'
+      # Escape hatch: label the PR `tolerable regression` to merge past the gate
+      # for an intended, reviewed slowdown that isn't worth re-blessing.
+      TOLERATE: ${{ contains(github.event.pull_request.labels.*.name, 'tolerable regression') }}
+    steps:
       - name: Gate
-        if: always()
         run: |
-          if [ "${{ steps.report.outputs.regression }}" != "true" ]; then
+          if [ "${{ needs.run.result }}" != "success" ]; then
+            echo "::error::Bench run job did not complete (${{ needs.run.result }})."
+            exit 1
+          fi
+          if [ "${{ needs.run.outputs.regression }}" != "true" ]; then
             echo "No regressions beyond ${BENCH_THRESHOLD}% threshold."
             exit 0
           fi

@@ -1,0 +1,9 @@
+# Config for `pnpm dev` — runs every dev server in one TUI. Sidebar on the
+# left lists each process; arrow keys (or click) switch the focused output
+# pane. `x` kills the selected process, `r` restarts it, `q` quits all.
+# https://github.com/pvolok/mprocs
+procs:
+  playground:
+    shell: pnpm --filter @sonoglyph/playground dev
+  website:
+    shell: pnpm --filter @sonoglyph/website dev

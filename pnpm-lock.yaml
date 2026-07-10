@@ -96,6 +96,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/dsp-wasm:
+    devDependencies:
+      '@sonoglyph/dsp':
+        specifier: workspace:*
+        version: link:../dsp
+
   packages/plugin-sdk:
     dependencies:
       '@sonoglyph/core':

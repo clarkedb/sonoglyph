@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // The wrapper and the generated bindings use browser globals (URL,
+    // WebAssembly, BufferSource, fetch types).
+    "lib": ["ES2022", "DOM"]
+  },
+  // Only the hand-written wrapper is typechecked. The generated pkg/ carries
+  // its own .d.ts, and the test reads wasm bytes via node APIs (no @types/node
+  // in this repo) — Vitest transpiles it without a full typecheck.
+  "include": ["src/index.ts"]
+}

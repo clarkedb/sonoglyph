@@ -10,3 +10,6 @@
 pub mod goertzel;
 
 pub use goertzel::{goertzel_magnitude, goertzel_power};
+
+#[cfg(target_arch = "wasm32")]
+mod wasm;

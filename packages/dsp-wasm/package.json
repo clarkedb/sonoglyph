@@ -1,0 +1,19 @@
+{
+  "name": "@sonoglyph/dsp-wasm",
+  "version": "0.1.0",
+  "description": "Sonoglyph Rust DSP core compiled to WebAssembly, cross-validated against @sonoglyph/dsp",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build ../../crates/sonoglyph-dsp --target web --out-name sonoglyph_dsp --out-dir ../../packages/dsp-wasm/pkg",
+    "typecheck:wasm": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@sonoglyph/dsp": "workspace:*"
+  }
+}

@@ -130,8 +130,15 @@ export default function Home() {
           </tbody>
         </table>
         <p className="mt-6 max-w-[70ch] font-mono text-xs leading-relaxed text-ink-dim">
-          in progress: a hosted playground and a Learn section — interactive articles grown from the
-          playground&rsquo;s embedded explainers. until then: clone the repo,{' '}
+          start with the{' '}
+          <a
+            className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
+            href="/learn"
+          >
+            Learn section
+          </a>{' '}
+          — interactive articles grown from the playground&rsquo;s embedded explainers. a hosted
+          playground is on the way; until then, clone the repo and{' '}
           <code className="rounded-sm border border-line bg-panel px-1.5 py-0.5">pnpm dev</code>.
         </p>
       </section>

@@ -92,6 +92,9 @@ jobs:
       - run: pnpm --filter @sonoglyph/dsp-wasm build:wasm
       - run: pnpm --filter @sonoglyph/dsp-wasm typecheck:wasm
       - run: pnpm exec vitest run packages/dsp-wasm/src/index.test.ts
+      # With pkg/ present, build the playground against the real WASM package
+      # (ci.yml's build job covers the stub path, where pkg/ is absent).
+      - run: pnpm --filter @sonoglyph/playground build
 
   # Aggregation gate: green only when every check above passed, so `main`
   # branch protection can require just this one job.

@@ -5,9 +5,12 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "types": "./types.d.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": {
+      "types": "./types.d.ts",
+      "default": "./src/index.ts"
+    }
   },
   "scripts": {
     "build:wasm": "wasm-pack build ../../crates/sonoglyph-dsp --target web --out-name sonoglyph_dsp --out-dir ../../packages/dsp-wasm/pkg",

@@ -13,6 +13,7 @@
     "@sonoglyph/browser": "workspace:*",
     "@sonoglyph/core": "workspace:*",
     "@sonoglyph/dsp": "workspace:*",
+    "@sonoglyph/dsp-wasm": "workspace:*",
     "@sonoglyph/plugin-dtmf": "workspace:*",
     "@sonoglyph/plugin-morse": "workspace:*",
     "react": "^19.0.0",

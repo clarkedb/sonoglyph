@@ -1,5 +1,6 @@
 import type { PlaygroundController, SignalSystem } from './controller.ts';
 import { ControllerContext, useController, useControllerTick } from './hooks.ts';
+import { BenchmarkPanel } from './components/BenchmarkPanel.tsx';
 import { FeaturesPanel } from './components/FeaturesPanel.tsx';
 import { GlyphTimeline } from './components/GlyphTimeline.tsx';
 import { InputPanel } from './components/InputPanel.tsx';
@@ -62,6 +63,7 @@ function Playground() {
         <FeaturesPanel />
         <GlyphTimeline />
         {system === 'morse' && <MeaningPanel />}
+        {system === 'dtmf' && <BenchmarkPanel />}
       </main>
     </>
   );

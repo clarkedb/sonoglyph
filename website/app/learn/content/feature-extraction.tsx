@@ -7,13 +7,13 @@ export default function FeatureExtraction() {
         Here is a fact about this pipeline that surprises people: the recognizers never see samples.
         The DTMF plugin that decodes a phone keypad has no idea what a <code>Float32Array</code> of
         air pressure looks like. By the time a recognizer gets involved, the 48,000 numbers per
-        second from <a href="/learn/sound-and-sampling">chapter 01</a> have already been distilled —
-        windowed, transformed, measured — into a much smaller stream of <strong>features</strong>:
+        second from <a href="/learn/sound-and-sampling">chapter 01</a> have already been distilled,
+        windowed, transformed, measured, into a much smaller stream of <strong>features</strong>:
         descriptions of the signal a recognizer can actually reason about. This chapter is about
         that hand-off, the seam in the architecture where DSP ends and recognition begins.
       </p>
       <p>
-        The obvious design is a single “feature vector” — one struct, computed once per analysis
+        The obvious design is a single “feature vector”: one struct, computed once per analysis
         window, handed to every plugin. This pipeline deliberately doesn’t have one, because
         different signal systems want <em>fundamentally</em> different descriptions. DTMF wants
         dominant frequency pairs. Morse wants an amplitude envelope over time and could not care
@@ -25,15 +25,15 @@ export default function FeatureExtraction() {
       <p>
         So the engine produces <strong>named, versioned feature streams</strong> instead. Four exist
         today. <code>spectrum</code> is the windowed FFT magnitudes from{' '}
-        <a href="/learn/fft-and-windowing">chapter 03</a> — one full frequency picture per frame.{' '}
+        <a href="/learn/fft-and-windowing">chapter 03</a>: one full frequency picture per frame.{' '}
         <code>peaks</code> is the distilled version from{' '}
         <a href="/learn/peak-detection">chapter 05</a>: just the frequencies that matter, sharpened
         below one bin. <code>envelope</code> is the loudness of the frame, nothing more.{' '}
-        <code>samples</code> is the escape hatch — the raw, unwindowed samples of the analysis
+        <code>samples</code> is the escape hatch. It’s the raw, unwindowed samples of the analysis
         frame, for plugins that insist on owning their own spectral strategy (the Goertzel DTMF
         recognizer in <a href="/learn/fft-vs-goertzel">chapter 09</a> is one). Each plugin declares
         in its metadata which streams it requires, and the pipeline delivers each stream’s frames
-        only to the plugins that asked. Future streams — pitch, chroma, mel coefficients — get added
+        only to the plugins that asked. Future streams (pitch, chroma, mel coefficients) get added
         as plugins need them, without touching anyone else.
       </p>
 
@@ -69,7 +69,7 @@ export default function FeatureExtraction() {
         (two tones at once, 770 and 1336 Hz) and then a Morse <em>S</em> (three 80 ms dots of 600
         Hz). The whole buffer ran through the real engine, offline, and every frame was kept. Scrub
         slowly across the leading edge of the key press and watch the rms climb over about four
-        frames rather than jumping — those are the overlapping windows straddling the edge, each
+        frames rather than jumping. Those are the overlapping windows straddling the edge, each
         catching a little more tone than the last. Meanwhile <code>span</code> and <code>hop</code>{' '}
         in the readout never move. The clock doesn’t care what the signal is doing; that
         indifference is what makes durations measurable.
@@ -80,12 +80,12 @@ export default function FeatureExtraction() {
         Look at what the envelope stream actually contains: <code>rms</code> and <code>peak</code>.
         Two floats per frame. It is almost embarrassing next to the 1,025-bin spectrum riding the
         same clock — and yet it is <em>everything</em> the Morse recognizer reads. The playground’s
-        own explainer states it flatly: the recognizer reads only the amplitude envelope — never the
-        spectrum — so the pitch is irrelevant. Key your dots at 600 Hz or 900 Hz or whistle them;
-        the recognizer sees the same on/off rhythm either way, because dots and dashes are durations
-        of loudness, not frequencies. Being pitch-blind isn’t a limitation, it’s the design:
-        choosing the right stream means the recognizer never has to ignore information it shouldn’t
-        have been handed in the first place.
+        own explainer states it flatly: the recognizer reads only the amplitude envelope, never the
+        spectrum, so the pitch is irrelevant. Key your dots at 600 Hz or 900 Hz or whistle them; the
+        recognizer sees the same on/off rhythm either way, because dots and dashes are durations of
+        loudness, not frequencies. Being pitch-blind isn’t a limitation, it’s the design: choosing
+        the right stream means the recognizer never has to ignore information it shouldn’t have been
+        handed in the first place.
       </p>
       <p className="aside">
         Why both rms and peak? Rms tracks the energy of the whole 42.7 ms frame — steady, hard to

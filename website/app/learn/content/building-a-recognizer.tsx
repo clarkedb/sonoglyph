@@ -5,9 +5,9 @@ export default function BuildingARecognizer() {
     <>
       <p>
         Everything so far has been measurement. <a href="/learn/feature-extraction">Chapter 06</a>{' '}
-        ended with the pipeline emitting tidy feature frames — a spectrum, a peak list, an envelope,
-        every 10.7 milliseconds — and none of it <em>means</em> anything yet. This chapter crosses
-        that line. A recognizer is the component that stares at the feature stream and commits:{' '}
+        ended with the pipeline emitting tidy feature frames every 10.7 milliseconds: a spectrum, a
+        peak list, an envelope. None of it <em>means</em> anything yet. This chapter crosses that
+        line. A recognizer is the component that stares at the feature stream and commits:{' '}
         <em>that was a 5</em>. In this codebase it is also the component you are most likely to
         write yourself, so the contract deserves a close look.
       </p>
@@ -15,15 +15,15 @@ export default function BuildingARecognizer() {
         The contract is push-in, emit-out. A plugin declares which streams it needs, the pipeline
         calls its <code>process(frame)</code> for every frame of those streams, and the plugin emits
         a <strong>glyph</strong> through <code>onGlyph</code> whenever it has accumulated enough
-        evidence — which is almost never on the frame that convinced it. Recognition is rarely a
+        evidence, which is almost never on the frame that convinced it. Recognition is rarely a
         per-frame classification, because signals live in time: DTMF needs a tone to{' '}
-        <em>persist</em>, Morse is nothing but durations. So plugins are deliberately stateful —
-        little machines that remember what they have seen and decide when a run of evidence has
+        <em>persist</em>, Morse is nothing but durations. So plugins are deliberately stateful. They
+        are little machines that remember what they have seen and decide when a run of evidence has
         opened and closed.
       </p>
       <p>
         The glyph itself is the framework’s central abstraction: a symbol, a time span, a
-        confidence, and a plugin-defined payload. The payload is the part to appreciate — it is the
+        confidence, and a plugin-defined payload. The payload is the part to appreciate. It is the
         recognizer showing its work. A DTMF glyph doesn’t just say <code>“5”</code>; it carries the
         measured frequencies, the nominals it matched, and the level difference between the two
         tones, so anything downstream (a timeline, a debugger, a skeptical engineer) can ask{' '}
@@ -34,13 +34,13 @@ export default function BuildingARecognizer() {
         stages. <strong>Classify</strong>: per frame, do the detected peaks contain exactly one
         low-group and one high-group tone, each within ±2% of a nominal, at compatible levels? That
         yields a symbol-or-nothing verdict every 10.7 ms. <strong>Segment</strong>: don’t believe
-        one frame. The same symbol must persist for at least 40 ms — the debounce the Bell spec
-        demanded of hardware decoders in 1963 (<a href="/learn/dtmf-history">chapter 08</a>) — and a
-        gap of at least 25 ms must separate repeated digits, or <code>555</code> would collapse into
-        one long 5. <strong>Finalize</strong>: when the run closes, aggregate it — average the
-        measured frequencies across the run, score the confidence — and emit one glyph. Which is why
-        the digit appears as the tone <em>ends</em>, not as it begins: the recognizer cannot know
-        the run is over until silence proves it.
+        one frame. The same symbol must persist for at least 40 ms, the debounce the Bell spec
+        demanded of hardware decoders in 1963 (<a href="/learn/dtmf-history">chapter 08</a>). A gap
+        of at least 25 ms must separate repeated digits, or <code>555</code> would collapse into one
+        long 5. <strong>Finalize</strong>: when the run closes, aggregate it, averaging the measured
+        frequencies across the run and scoring the confidence, then emit one glyph. Which is why the
+        digit appears as the tone <em>ends</em>, not as it begins: the recognizer cannot know the
+        run is over until silence proves it.
       </p>
 
       <RecognizerFigure />
@@ -77,7 +77,7 @@ export default function BuildingARecognizer() {
         end-of-stream (a file can end mid-tone; something must close the run) and{' '}
         <code>reset()</code> for source changes, and that is the entire surface: a recognizer is{' '}
         <code>process</code>, <code>onGlyph</code>, and honesty about time. The next two chapters
-        put the contract under stress —{' '}
+        put the contract under stress:{' '}
         <a href="/learn/dtmf-history">why DTMF’s numbers are what they are</a>, and{' '}
         <a href="/learn/fft-vs-goertzel">
           two rival strategies implementing the same plugin interface

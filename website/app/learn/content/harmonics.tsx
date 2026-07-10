@@ -7,7 +7,7 @@ export default function Harmonics() {
         Physics classrooms love the tuning fork because it is the one sound-maker that behaves:
         strike it and it rings at almost exactly one frequency, a single clean spike on the
         spectrum. Almost nothing else in the world is that polite. Pluck a guitar string and it does
-        not pick one motion — it vibrates along its whole length, <em>and</em> in two halves,{' '}
+        not pick one motion. It vibrates along its whole length, <em>and</em> in two halves,{' '}
         <em>and</em> in three thirds, and in ever-smaller subdivisions, all at the same time. Each
         of those shapes rings at its own rate: the whole string at some frequency f₀, the halves at
         exactly 2·f₀, the thirds at 3·f₀, and so on up. One plucked note is not one frequency. It is
@@ -16,7 +16,7 @@ export default function Harmonics() {
       <p>
         The members of the stack are called <strong>harmonics</strong>: whole-number multiples of
         the <strong>fundamental</strong>, f₀. (Everything above the fundamental also goes by{' '}
-        <strong>overtones</strong> — same idea, counted from one rung up.) Point the FFT from{' '}
+        <strong>overtones</strong>, the same idea counted from one rung up.) Point the FFT from{' '}
         <a href="/learn/fft-and-windowing">chapter 03</a> at any real instrument and this is what
         you get: not a lone spike but a picket fence, spikes marching up the spectrum at f₀, 2·f₀,
         3·f₀, each one shorter or taller than its neighbors depending on what made the sound.
@@ -35,11 +35,11 @@ export default function Harmonics() {
       </p>
       <p>
         A few recipes are famous enough to have names, and the math is simple enough to hear. Take
-        only the odd harmonics at heights 1/n and the sum squares off into a — well, a{' '}
+        only the odd harmonics at heights 1/n and the sum squares off into a{' '}
         <strong>square wave</strong>, the buzzy tone of early video games. Take <em>every</em>{' '}
         harmonic at 1/n and you get the brassy rip of a <strong>sawtooth</strong>. Odd harmonics
-        again but falling off as 1/n² — much less energy up high — and you get the soft, hollow{' '}
-        <strong>triangle</strong>. The figure below builds each recipe the honest way: eight{' '}
+        again, but falling off as 1/n², so there’s much less energy up high, and you get the soft,
+        hollow <strong>triangle</strong>. The figure below builds each recipe the honest way: eight{' '}
         <code>ToneSpec</code>s summed by <code>tones()</code> from <code>@sonoglyph/dsp</code>, then
         handed to the same FFT the pipeline runs.
       </p>
@@ -47,9 +47,9 @@ export default function Harmonics() {
       <HarmonicsFigure />
 
       <p>
-        Switch between recipes and watch both views. The waveform reshapes completely — smooth
-        curve, squared shoulders, ramps, ripples — while the spectrum tells you exactly why, one
-        spike per harmonic, heights tracking the recipe. Now press play after each switch. The pitch{' '}
+        Switch between recipes and watch both views. The waveform reshapes completely: smooth curve,
+        squared shoulders, ramps, ripples. The spectrum tells you exactly why, one spike per
+        harmonic, heights tracking the recipe. Now press play after each switch. The pitch{' '}
         <em>never moves</em>. Every one of these waveforms repeats 220 times per second, so every
         one is the same A; only the voice saying it changes. The brightness slider is a tone knob:
         it scales harmonic k by brightness^(k−1), dimming the top of the stack first, and at zero
@@ -68,14 +68,13 @@ export default function Harmonics() {
       <p>
         This matters to Sonoglyph because real signals arrive wearing their overtones. The
         playground’s keypad synthesizes mathematically pure sine pairs, but a human whistling or
-        humming a tone near 697 Hz — the top row of a telephone keypad — delivers a stack: real
-        energy at 1,394 Hz, some at 2,091 Hz, trailing on up. A naive recognizer that treats{' '}
-        <em>any</em> strong spike as an independent tone would read that 1,394 Hz harmonic as a
-        second signal, sitting squarely inside DTMF’s high-frequency band. It lands on none of the
-        four high-group frequencies, though — and that is no accident. The engineers who chose
-        DTMF’s eight frequencies in the 1950s picked them so that no tone’s harmonic falls on any
-        other tone, a piece of numerical craftsmanship <a href="/learn/dtmf-history">chapter 08</a>{' '}
-        unpacks in full.
+        humming a tone near 697 Hz (the top row of a telephone keypad) delivers a stack: real energy
+        at 1,394 Hz, some at 2,091 Hz, trailing on up. A naive recognizer that treats <em>any</em>{' '}
+        strong spike as an independent tone would read that 1,394 Hz harmonic as a second signal,
+        sitting squarely inside DTMF’s high-frequency band. It lands on none of the four high-group
+        frequencies, though. That is no accident. The engineers who chose DTMF’s eight frequencies
+        in the 1950s picked them so that no tone’s harmonic falls on any other tone, a piece of
+        numerical craftsmanship <a href="/learn/dtmf-history">chapter 08</a> unpacks in full.
       </p>
       <p>
         So a recognizer worthy of the name holds two ideas at once: a spike at 2·f₀ is{' '}
@@ -87,7 +86,7 @@ export default function Harmonics() {
         does not.
       </p>
       <p>
-        Every claim in this chapter is one glance away in the spectrum view — it is the instrument
+        Every claim in this chapter is one glance away in the spectrum view. It is the instrument
         that makes the invisible stack visible. Open the playground, hum at the microphone, and your
         own overtone stack marches across the display in real time. The next question is how a{' '}
         <em>machine</em> reads that picture: turning a forest of spikes into a short, honest list of

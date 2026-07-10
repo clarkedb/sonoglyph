@@ -15,7 +15,7 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
     "build": "pnpm -r --if-present build",
-    "build:ci": "pnpm --filter @sonoglyph/dsp-wasm build:ci && pnpm build",
+    "build:ci": "pnpm --filter @sonoglyph/dsp-wasm build:ci && pnpm --filter @sonoglyph/playground build",
     "bootstrap": "sh scripts/bootstrap.sh",
     "prepare": "husky"
   },

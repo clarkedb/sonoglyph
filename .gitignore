@@ -4,6 +4,12 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 
+# Next.js (website/)
+.next/
+out/
+next-env.d.ts
+website/.impeccable/hook.cache.json
+
 # Cargo build output. Cargo.lock is committed (application tree, not a
 # library-only one).
 /target/

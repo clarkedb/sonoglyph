@@ -1,0 +1,207 @@
+@import 'tailwindcss';
+
+/*
+ * Sonoglyph website theme — "the instrument at night".
+ * Drenched void + a single amber phosphor trace: everything that glows is
+ * signal. Light mode is the same manual as a printed page. Tokens are
+ * OKLCH; `data-theme` is stamped on <html> before first paint by the
+ * inline script in app/layout.tsx (dark unless the OS prefers light).
+ * See website/.impeccable/briefs/landing-page.md and website/PRODUCT.md.
+ */
+:root {
+  color-scheme: dark;
+  --void: oklch(0.16 0.015 250);
+  --panel: oklch(0.19 0.018 250);
+  --ink: oklch(0.89 0.01 250);
+  --ink-dim: oklch(0.71 0.02 250);
+  --line: oklch(0.32 0.02 250);
+  --phosphor: oklch(0.8 0.14 75);
+  --phosphor-dim: oklch(0.62 0.1 72);
+  --grid-minor: color-mix(in oklch, var(--line) 30%, transparent);
+  --grid-major: color-mix(in oklch, var(--line) 60%, transparent);
+  --glow: 0 0 14px color-mix(in oklch, var(--phosphor) 40%, transparent);
+  --glow-soft: 0 0 22px color-mix(in oklch, var(--phosphor) 18%, transparent);
+}
+
+/* The printed manual: same line-work on drafting paper. Glows don't print. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --void: oklch(0.97 0.004 250);
+  --panel: oklch(0.94 0.006 250);
+  --ink: oklch(0.26 0.02 250);
+  --ink-dim: oklch(0.46 0.02 250);
+  --line: oklch(0.83 0.012 250);
+  --phosphor: oklch(0.53 0.13 65);
+  --phosphor-dim: oklch(0.62 0.11 65);
+  --grid-minor: color-mix(in oklch, var(--line) 45%, transparent);
+  --grid-major: color-mix(in oklch, var(--line) 85%, transparent);
+  --glow: none;
+  --glow-soft: none;
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-line: var(--line);
+  --color-phosphor: var(--phosphor);
+  --color-phosphor-dim: var(--phosphor-dim);
+  --font-sans: var(--font-barlow), 'Helvetica Neue', Arial, sans-serif;
+  --font-display: var(--font-condensed), 'Arial Narrow', sans-serif;
+  --font-mono: var(--font-fragment), ui-monospace, 'SF Mono', Menlo, monospace;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--void);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--phosphor) 30%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--phosphor);
+  outline-offset: 2px;
+}
+
+/* Graph paper: minor 8px + major 40px rulings, theme-aware. */
+.graph-grid {
+  background-image:
+    linear-gradient(to right, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px);
+  background-size:
+    8px 8px,
+    8px 8px,
+    40px 40px,
+    40px 40px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Decode choreography: press → trace draws → analyzer bars sweep up → */
+/* glyph flares in. All CSS, so prefers-reduced-motion can flatten it. */
+/* ------------------------------------------------------------------ */
+
+@keyframes trace-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.anim-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: trace-draw 380ms var(--ease-out-quart);
+}
+
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.anim-bar {
+  transform-origin: bottom;
+  transform-box: fill-box;
+  animation: bar-rise 260ms var(--ease-out-quart) both;
+  animation-delay: calc(var(--i, 0) * 4ms);
+}
+
+@keyframes glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.anim-glyph {
+  animation: glyph-in 320ms var(--ease-out-expo) 220ms both;
+}
+
+@keyframes idle-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.anim-idle {
+  animation: idle-breathe 4s ease-in-out infinite;
+}
+
+/* Phosphor glow: SVG strokes need drop-shadow, boxes use --glow. Print
+ * (light) theme suppresses both — ink doesn't glow on paper. */
+.trace-glow {
+  filter: drop-shadow(0 0 3px color-mix(in oklch, var(--phosphor) 55%, transparent));
+}
+
+.glyph-glow {
+  box-shadow: var(--glow-soft);
+  text-shadow: var(--glow);
+}
+
+.text-glow {
+  text-shadow: var(--glow);
+}
+
+:root[data-theme='light'] .trace-glow {
+  filter: none;
+}
+
+:root[data-theme='light'] .glyph-glow {
+  box-shadow: none;
+  text-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .anim-trace,
+  .anim-bar,
+  .anim-glyph,
+  .anim-idle {
+    animation: none;
+  }
+  .anim-idle {
+    opacity: 0.65;
+  }
+}

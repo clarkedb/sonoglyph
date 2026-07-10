@@ -2,5 +2,9 @@ packages:
   - apps/*
   - packages/*
   - plugins/*
+  - website
 allowBuilds:
   esbuild: true
+  # Next.js pulls in sharp for image optimization; the site uses no images yet,
+  # so its native build step is unnecessary.
+  sharp: false

@@ -132,9 +132,10 @@ extracted to `@sonoglyph/react` (done, PR #50) so both consumers render one
 source of truth, styled through the token contract (`@sonoglyph/react/theme.css`).
 The playground has converged onto the website's dark "instrument at night"
 palette (void + phosphor amber, Barlow/Barlow Condensed/Fragment Mono,
-matching favicon) — the website itself doesn't consume `@sonoglyph/react`
-yet, so the printed (light) theme and a runtime toggle in the playground
-remain deferred until that embed happens.
+matching favicon). The website now embeds `@sonoglyph/react` too (issue #52):
+its `globals.css` maps the token contract's names onto the site variables, so
+the embedded views follow the site's `data-theme` — including the printed
+(light) variant. A runtime toggle in the playground itself remains deferred.
 
 - **Next.js site (`website/`) at `sonoglyph.dev`**: the teaching/marketing
   surface — project introduction, the **Learn** section, focused hosted
@@ -145,13 +146,17 @@ remain deferred until that embed happens.
   rather than ported into Next — no `AudioWorklet`/controller migration, and
   the site never needed the whole app inline. The site's "open the playground"
   CTA links here.
-- **Learn** section (in the site) — articles promoted from the playground's
-  embedded explainers, each embedding its `@sonoglyph/react` component
-  directly: sound & sampling, Nyquist, FFT & windowing (the resolution
-  tradeoff), harmonics, peak detection, feature extraction, "building a
-  recognizer" end-to-end, DTMF history & why it works, FFT vs. Goertzel.
-- **Hosted examples** (in the site, built from `@sonoglyph/react`): focused
-  DTMF decoder, Morse decoder, tone playground — smaller than the full tool.
+- **Learn** section (in the site) — done (issue #52): nine chapters promoted
+  from the playground's embedded explainers, each with a live interactive
+  driven by the real pipeline packages (bespoke SVG figures plus embedded
+  `@sonoglyph/react` views where they fit): sound & sampling, Nyquist, FFT &
+  windowing (the resolution tradeoff), harmonics, peak detection, feature
+  extraction, "building a recognizer" end-to-end, DTMF history & why it
+  works, FFT vs. Goertzel.
+- **Hosted examples** (in the site, built from `@sonoglyph/react`) — done
+  (issue #52), routed under `/examples`: focused DTMF decoder, Morse decoder
+  (message keyer + live straight key), tone playground — smaller than the
+  full tool.
 - Deployment via CI / Vercel (see below).
 
 ## Beyond

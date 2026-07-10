@@ -91,6 +91,53 @@ describe('TsDspEngine', () => {
   });
 });
 
+describe('TsDspEngine flush (end-of-stream drain)', () => {
+  it('drains the tail push left buffered short of a full window', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE, windowSize: 1024, hopSize: 512 });
+    // 1024 + 300 samples: one window at offset 0, then 300 left over — under
+    // a full window, so push emits nothing more for them.
+    const pushed = engine.push(sine(1000, 1324 / SAMPLE_RATE, SAMPLE_RATE, 1));
+    expect(pushed.filter((f) => f.stream === STREAM_ENVELOPE).length).toBe(1);
+    const drained = engine.flush();
+    // One final frame per stream, timed at the leftover samples' start.
+    expect(drained.map((f) => f.stream)).toEqual([STREAM_SPECTRUM, STREAM_PEAKS, STREAM_ENVELOPE]);
+    expect(drained[0]!.time).toBeCloseTo(512 / SAMPLE_RATE, 9);
+  });
+
+  it('emits a frame for a signal shorter than one window (push emits none)', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE, windowSize: 1024, hopSize: 512 });
+    const pushed = engine.push(sine(1000, 512 / SAMPLE_RATE, SAMPLE_RATE, 1));
+    expect(pushed).toHaveLength(0);
+    const drained = engine.flush();
+    expect(drained.length).toBe(3);
+    // Real samples sit at the front of the zero-padded window, so the tone
+    // still registers.
+    const spectrum = drained.find((f) => f.stream === STREAM_SPECTRUM)!.data as SpectrumData;
+    expect(Math.max(...spectrum.magnitudes)).toBeGreaterThan(0.1);
+  });
+
+  it('is a no-op when the tail is exactly window-aligned', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE, windowSize: 1024, hopSize: 512 });
+    engine.push(silence(2048 / SAMPLE_RATE, SAMPLE_RATE)); // windows at 0, 512, 1024
+    expect(engine.flush()).toHaveLength(0);
+  });
+
+  it('is idempotent: a second flush drains nothing', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE, windowSize: 1024, hopSize: 512 });
+    engine.push(sine(1000, 700 / SAMPLE_RATE, SAMPLE_RATE, 1));
+    expect(engine.flush().length).toBe(3);
+    expect(engine.flush()).toHaveLength(0);
+  });
+
+  it('reset clears the drain state', () => {
+    const engine = new TsDspEngine({ sampleRate: SAMPLE_RATE, windowSize: 1024, hopSize: 512 });
+    engine.push(sine(1000, 700 / SAMPLE_RATE, SAMPLE_RATE, 1));
+    engine.reset();
+    // Nothing buffered after reset, so nothing to drain.
+    expect(engine.flush()).toHaveLength(0);
+  });
+});
+
 describe('samples stream', () => {
   it('carries an independent copy of the raw analysis frame', () => {
     const engine = new TsDspEngine({

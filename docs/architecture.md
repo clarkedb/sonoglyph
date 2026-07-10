@@ -77,6 +77,7 @@ interface RecognizerPlugin {
   metadata: PluginMetadata; // id, name, version, requiredStreams (options schema arrives with the Phase 2 plugin SDK)
   process(frame: FeatureFrame): void; // called for each frame of a required stream
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe;
+  flush?(): void; // end of stream: emit a glyph still in flight (optional)
   reset(): void; // clear internal state (e.g. on source change)
 }
 ```
@@ -84,6 +85,8 @@ interface RecognizerPlugin {
 Plugins own their segmentation state and emit glyphs asynchronously, whenever they have enough evidence. The plugin SDK will provide helpers so that "dumb" plugins (pure per-frame classifiers) can be written as a single function and get debouncing for free.
 
 A plugin's `process` is expected to throw only on its own bugs, never as control flow. When it does, the `Pipeline` catches it per plugin per frame, reports it through `onError`, and keeps delivering that frame to every other plugin — one broken recognizer must not stop the rest of the batch, since Phase 2's plugins are written by strangers sharing a live pipeline.
+
+Because a run only ends when a gap proves it (silence, or a different symbol), a run still open when the stream simply stops — a file runs out, a recording is truncated — would be dropped. `Pipeline.flush()` closes that gap: it drains the engine's buffered tail into a final frame, then calls each plugin's optional `flush()` to emit whatever is in flight. `Translator` has the same optional hook for a trailing partial (the final Morse letter, with no following element to end it); the driver calls it after the pipeline flush, so any last glyph has already arrived. Flush is for stream _ends_, not a substitute for a gap — real silence between symbols is still what separates them.
 
 ## Layers and packages
 

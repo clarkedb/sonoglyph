@@ -7,16 +7,17 @@ import type {
 } from '@sonoglyph/core';
 
 /**
- * A plugin's `process(frame)` threw instead of returning. Reported through
- * `Pipeline.onError`; the offending plugin is skipped for this frame and
- * every other plugin keeps receiving frames — one broken recognizer must
- * not starve its siblings.
+ * A plugin threw instead of returning — from `process(frame)` while a frame
+ * was in flight, or from `flush()` at end of stream. Reported through
+ * `Pipeline.onError`; the offending plugin is skipped and every other plugin
+ * keeps going — one broken recognizer must not starve its siblings.
  */
 export interface PipelineError {
-  /** The plugin whose `process` call threw. */
+  /** The plugin whose `process` or `flush` call threw. */
   plugin: RecognizerPlugin;
-  /** The frame it was processing when it threw. */
-  frame: FeatureFrame;
+  /** The frame it was processing when it threw; absent for a `flush` error,
+   * which is not tied to a frame. */
+  frame?: FeatureFrame;
   /** The thrown value, as-is — plugin authors may throw anything. */
   error: unknown;
 }
@@ -62,6 +63,39 @@ export class Pipeline {
    * this batch. */
   push(samples: Float32Array): FeatureFrame[] {
     const frames = this.engine.push(samples);
+    this.dispatch(frames);
+    return frames;
+  }
+
+  /**
+   * End of stream: drain the engine's final frame(s) and flush every
+   * plugin, so recognition still in flight — a key held with no trailing
+   * silence, a press cut off when a recording stops — emits instead of
+   * being dropped. Returns the drained frames.
+   *
+   * Translators are not owned by the pipeline (they subscribe via
+   * `onGlyph`); the driver flushes them AFTER this call, so any glyph a
+   * plugin emits here reaches them first.
+   *
+   * A plugin whose `flush` throws is reported via `onError` and skipped,
+   * exactly like a throwing `process` — one broken recognizer must not
+   * stop the others from emitting their final glyph.
+   */
+  flush(): FeatureFrame[] {
+    const frames = this.engine.flush();
+    this.dispatch(frames);
+    for (const plugin of this.plugins) {
+      try {
+        plugin.flush?.();
+      } catch (error) {
+        for (const cb of this.errorSubs) cb({ plugin, error });
+      }
+    }
+    return frames;
+  }
+
+  /** Fan a batch of frames out to frame subscribers and matching plugins. */
+  private dispatch(frames: FeatureFrame[]): void {
     for (const frame of frames) {
       for (const cb of this.frameSubs) cb(frame);
       for (const plugin of this.plugins) {
@@ -74,7 +108,6 @@ export class Pipeline {
         }
       }
     }
-    return frames;
   }
 
   onGlyph(cb: (glyph: Glyph) => void): Unsubscribe {

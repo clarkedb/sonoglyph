@@ -56,6 +56,11 @@ export class TsDspEngine implements DspEngine {
   private buffered = 0;
   /** Stream time (seconds) of buffer[0]. */
   private bufferStartSec = 0;
+  /** Total samples pushed since the last reset (absolute). */
+  private pushedSamples = 0;
+  /** Absolute index one past the end of the furthest window analyzed —
+   * how `flush` tells whether real samples remain uncovered by any frame. */
+  private coveredSamples = 0;
 
   constructor(options: Partial<DspEngineOptions> = {}) {
     const opts = { ...DEFAULT_ENGINE_OPTIONS, ...options };
@@ -79,14 +84,19 @@ export class TsDspEngine implements DspEngine {
     this.ensureCapacity(this.buffered + samples.length);
     this.buffer.set(samples, this.buffered);
     this.buffered += samples.length;
+    this.pushedSamples += samples.length;
 
     const { windowSize, hopSize, sampleRate } = this.options;
     const frames: FeatureFrame[] = [];
+    // Absolute index of buffer[0] — anchors each window's coverage so the
+    // count survives the copyWithin shift below.
+    const base = this.pushedSamples - this.buffered;
 
     let offset = 0;
     while (this.buffered - offset >= windowSize) {
       const time = this.bufferStartSec + offset / sampleRate;
       this.analyze(this.buffer.subarray(offset, offset + windowSize), time, frames);
+      this.coveredSamples = base + offset + windowSize;
       offset += hopSize;
     }
 
@@ -98,9 +108,31 @@ export class TsDspEngine implements DspEngine {
     return frames;
   }
 
+  flush(): FeatureFrame[] {
+    const frames: FeatureFrame[] = [];
+    // Real samples the analysis loop never reached (the last <windowSize of
+    // a stream, or a whole stream shorter than one window) are still in the
+    // buffer. Emit one final frame for them, zero-padded up to a full
+    // window — real samples at the front, silence where the signal ran out.
+    if (this.buffered > 0 && this.pushedSamples > this.coveredSamples) {
+      const { windowSize, sampleRate } = this.options;
+      const padded = new Float32Array(windowSize);
+      padded.set(this.buffer.subarray(0, this.buffered));
+      this.analyze(padded, this.bufferStartSec, frames);
+      // Drained: advance the clock past it (so a later push stays
+      // monotonic) and leave nothing for a second flush to re-emit.
+      this.bufferStartSec += this.buffered / sampleRate;
+      this.coveredSamples = this.pushedSamples;
+      this.buffered = 0;
+    }
+    return frames;
+  }
+
   reset(): void {
     this.buffered = 0;
     this.bufferStartSec = 0;
+    this.pushedSamples = 0;
+    this.coveredSamples = 0;
   }
 
   private analyze(frame: Float32Array, time: number, out: FeatureFrame[]): void {

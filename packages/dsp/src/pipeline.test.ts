@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DspEngine, FeatureFrame, RecognizerPlugin } from '@sonoglyph/core';
 import { Pipeline } from './pipeline.ts';
 
-function fakeEngine(frames: FeatureFrame[]): DspEngine {
+function fakeEngine(frames: FeatureFrame[], flushFrames: FeatureFrame[] = []): DspEngine {
   return {
     options: {
       sampleRate: 48_000,
@@ -12,6 +12,7 @@ function fakeEngine(frames: FeatureFrame[]): DspEngine {
       streams: ['test'],
     },
     push: () => frames,
+    flush: () => flushFrames,
     reset: () => {},
   };
 }
@@ -90,5 +91,28 @@ describe('Pipeline error isolation', () => {
     unsubscribe();
     pipeline.push(new Float32Array(0));
     expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('isolates a throwing flush(): siblings still flush, error reported with no frame', () => {
+    const flushed: string[] = [];
+    const error = new Error('boom');
+    const thrower: RecognizerPlugin = {
+      ...stubPlugin('bad', () => {}),
+      flush: () => {
+        throw error;
+      },
+    };
+    const good: RecognizerPlugin = {
+      ...stubPlugin('good', () => {}),
+      flush: () => flushed.push('good'),
+    };
+    const pipeline = new Pipeline(fakeEngine([]));
+    pipeline.addPlugin(thrower);
+    pipeline.addPlugin(good);
+    const onError = vi.fn();
+    pipeline.onError(onError);
+    expect(() => pipeline.flush()).not.toThrow();
+    expect(flushed).toEqual(['good']);
+    expect(onError).toHaveBeenCalledWith({ plugin: thrower, error });
   });
 });

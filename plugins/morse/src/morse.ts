@@ -131,6 +131,13 @@ export class MorseRecognizer implements RecognizerPlugin {
     return () => this.listeners.delete(cb);
   }
 
+  flush(): void {
+    // End of transmission: close a key-down still open (the last element
+    // has no trailing silence to end it). The element machine emits it
+    // through the same forwarding as any other element glyph.
+    this.elements.flush?.();
+  }
+
   reset(): void {
     this.elements.reset();
     this.unitSec = this.options.unitMs / 1000;

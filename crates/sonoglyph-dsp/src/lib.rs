@@ -8,8 +8,14 @@
 //! the two implementations agree within the golden tolerance.
 
 pub mod goertzel;
+pub mod peaks;
+pub mod spectrum;
+pub mod window;
 
 pub use goertzel::{goertzel_magnitude, goertzel_power};
+pub use peaks::{detect_peaks, PeakOptions, SpectralPeak};
+pub use spectrum::{apply_window, envelope, spectrum_magnitudes, Envelope};
+pub use window::{make_window, window_sum, WindowName};
 
 #[cfg(target_arch = "wasm32")]
 mod wasm;

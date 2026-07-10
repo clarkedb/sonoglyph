@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+/*
+ * Semantic theme tokens. `data-theme` is stamped on <html> before first paint
+ * by the inline script in app/layout.tsx; the light values below are the
+ * no-JS fallback. When the playground becomes a second consumer these move to
+ * a shared preset (docs/roadmap.md, Phase 4).
+ */
+:root {
+  color-scheme: light;
+  --paper: #f4f1e9;
+  --panel: #fbf9f3;
+  --ink: #262117;
+  --ink-dim: #6e6656;
+  --line: #dcd5c4;
+  --accent: #9c5310;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --paper: #14110c;
+  --panel: #1c1812;
+  --ink: #e9e2d2;
+  --ink-dim: #a29881;
+  --line: #322c21;
+  --accent: #d89b4a;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* Hairline divider ruled with tick marks, like a frequency axis. */
+.rule-ticks {
+  height: 7px;
+  border-top: 1px solid var(--line);
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--line),
+    var(--line) 1px,
+    transparent 1px,
+    transparent 26px
+  );
+}

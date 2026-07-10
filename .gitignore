@@ -3,3 +3,8 @@ dist/
 coverage/
 *.tsbuildinfo
 .DS_Store
+
+# Next.js (website/)
+.next/
+out/
+next-env.d.ts

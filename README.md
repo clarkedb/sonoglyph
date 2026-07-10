@@ -31,6 +31,7 @@ pnpm test            # unit + integration tests (all signals synthesized in code
 | [`packages/browser`](packages/browser) | Browser audio: microphone capture via a dumb AudioWorklet, ring buffer, WAV codec, streaming buffer source.               |
 | [`plugins/dtmf`](plugins/dtmf)         | The reference recognizer: all 16 DTMF keys from spectral peak pairs, with a debouncing state machine.                     |
 | [`apps/playground`](apps/playground)   | Vite + React playground: every pipeline stage live and inspectable.                                                       |
+| [`website`](website)                   | Next.js site: project introduction (hosted playground and Learn section to follow).                                       |
 
 ## Documentation
 

@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react-hooks';
 
 export default tseslint.config(
-  { ignores: ['**/dist/', '**/coverage/', '**/node_modules/'] },
+  { ignores: ['**/dist/', '**/coverage/', '**/node_modules/', '**/.next/', '**/next-env.d.ts'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -23,7 +23,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/playground/**/*.{ts,tsx}'],
+    files: ['apps/playground/**/*.{ts,tsx}', 'website/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': react },
     rules: react.configs.recommended.rules,
   },

@@ -186,7 +186,13 @@ Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognit
 - Two Vercel projects on this repo, both with PR preview deployments:
   - `sonoglyph.dev` — the Next.js site (root `website/`).
   - `play.sonoglyph.dev` — the Vite playground (root `apps/playground`,
-    build `pnpm --filter @sonoglyph/playground build`, output `dist/`).
-    Vercel's Git integration handles build-on-push and previews, so no
-    `deploy.yml` is needed unless a target outside Vercel (e.g. GitHub Pages)
+    output `dist/`). Build command is overridden via
+    `apps/playground/vercel.json` to `cd ../.. && pnpm build:ci` — the
+    Root Directory is `apps/playground`, but `build:ci` needs the whole
+    workspace to provision Rust + wasm-pack and build `@sonoglyph/dsp-wasm`
+    before the playground itself, so the plain per-package build command
+    isn't enough once the WASM engine is part of the deploy (see
+    `packages/dsp-wasm/README.md`). Vercel's Git integration handles
+    build-on-push and previews, so no `deploy.yml` is needed unless a
+    target outside Vercel (e.g. GitHub Pages)
     is later chosen.

@@ -6,7 +6,9 @@ const nextConfig: NextConfig = {
   transpilePackages: [
     '@sonoglyph/core',
     '@sonoglyph/dsp',
+    '@sonoglyph/eridian',
     '@sonoglyph/plugin-dtmf',
+    '@sonoglyph/plugin-eridian',
     '@sonoglyph/plugin-morse',
     '@sonoglyph/plugin-sdk',
     '@sonoglyph/react',

@@ -7,6 +7,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: SITE_URL, changeFrequency: 'monthly', priority: 1 },
     { url: `${SITE_URL}/learn`, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/examples`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${SITE_URL}/eridian`, changeFrequency: 'monthly', priority: 0.7 },
+    { url: `${SITE_URL}/eridian/dictionary`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/eridian/compose`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${SITE_URL}/eridian/learn`, changeFrequency: 'monthly', priority: 0.6 },
   ];
 
   const articleRoutes: MetadataRoute.Sitemap = ARTICLES.map((article) => ({

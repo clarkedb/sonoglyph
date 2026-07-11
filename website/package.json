@@ -12,7 +12,9 @@
   "dependencies": {
     "@sonoglyph/core": "workspace:*",
     "@sonoglyph/dsp": "workspace:*",
+    "@sonoglyph/eridian": "workspace:*",
     "@sonoglyph/plugin-dtmf": "workspace:*",
+    "@sonoglyph/plugin-eridian": "workspace:*",
     "@sonoglyph/plugin-morse": "workspace:*",
     "@sonoglyph/react": "workspace:*",
     "@vercel/analytics": "^2.0.1",

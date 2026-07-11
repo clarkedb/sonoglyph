@@ -5,6 +5,7 @@ import type { Register, SyllableCode } from '@sonoglyph/eridian';
 import type { EridianChordPayload, EridianUtterance } from '@sonoglyph/plugin-eridian';
 import { FigureShell, ZoneLabel } from '../../learn/components/figure-shell';
 import { Btn, Select } from '../../learn/components/controls';
+import { QrCode, ShareButton } from '../components/share';
 import { useTranslatorEngine, WINDOW_SIZES, type TranslatorStatus } from './translator-engine';
 
 /* Grace's translator console — the live instrument. Arm the microphone and
@@ -155,19 +156,45 @@ export function TranslatorConsole() {
             </Btn>
           ))}
         </div>
-        <details className="mt-3 rounded-sm border border-dashed border-line px-3 py-2 text-[12px] text-ink-dim">
-          <summary className="cursor-pointer">Use a second device as Rocky</summary>
-          <p className="mt-1.5 leading-relaxed">
-            Arm the microphone here, then open the{' '}
-            <a
-              href="/eridian/compose"
-              className="text-phosphor underline decoration-line underline-offset-4 hover:decoration-phosphor"
-            >
-              composer
-            </a>{' '}
-            on a phone, build a sentence, and play it near this device’s mic. The chords travel
-            through the air — exactly the acoustic path a real translator would decode.
-          </p>
+        <details className="mt-3 rounded-sm border border-dashed border-line px-3 py-2.5 text-[12px] text-ink-dim">
+          <summary className="cursor-pointer">Use a phone as Rocky</summary>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
+            <QrCode
+              path="/eridian/transmitter"
+              alt="Scan to open the Rocky transmitter on a phone"
+            />
+            <div className="space-y-2.5">
+              <p className="leading-relaxed">
+                Scan the code (or open the{' '}
+                <a
+                  href="/eridian/transmitter"
+                  className="text-phosphor underline decoration-line underline-offset-4 hover:decoration-phosphor"
+                >
+                  Rocky transmitter
+                </a>
+                ) on a phone, arm the microphone here, and tap a phrase near this device’s mic. The
+                chords travel through the air — exactly the acoustic path a real translator would
+                decode.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <ShareButton
+                  path="/eridian/transmitter"
+                  title="Rocky transmitter"
+                  label="Send to a phone"
+                />
+                <span className="text-ink-dim">
+                  · or the{' '}
+                  <a
+                    href="/eridian/compose"
+                    className="text-phosphor underline decoration-line underline-offset-4 hover:decoration-phosphor"
+                  >
+                    composer
+                  </a>{' '}
+                  for a custom sentence
+                </span>
+              </div>
+            </div>
+          </div>
         </details>
       </div>
     </FigureShell>

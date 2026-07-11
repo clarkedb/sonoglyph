@@ -2,6 +2,7 @@ import type { PlaygroundController, SignalSystem } from './controller.ts';
 import { ControllerContext, useController, useControllerTick } from './hooks.ts';
 import { BenchmarkPanel } from './components/BenchmarkPanel.tsx';
 import { EngineBenchmarkPanel } from './components/EngineBenchmarkPanel.tsx';
+import { EridianPanel } from './components/EridianPanel.tsx';
 import { FeaturesPanel } from './components/FeaturesPanel.tsx';
 import { GlyphTimeline } from './components/GlyphTimeline.tsx';
 import { InputPanel } from './components/InputPanel.tsx';
@@ -22,6 +23,7 @@ export function App({ controller }: { controller: PlaygroundController }) {
 const SYSTEMS: { id: SignalSystem; label: string }[] = [
   { id: 'dtmf', label: 'DTMF' },
   { id: 'morse', label: 'Morse' },
+  { id: 'eridian', label: 'Eridian' },
 ];
 
 function Playground() {
@@ -68,6 +70,7 @@ function Playground() {
         <FeaturesPanel />
         <GlyphTimeline />
         {system === 'morse' && <MeaningPanel />}
+        {system === 'eridian' && <EridianPanel />}
         {system === 'dtmf' && <BenchmarkPanel />}
         {system === 'dtmf' && <EngineBenchmarkPanel />}
       </main>

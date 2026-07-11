@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import type { Register, SyllableCode } from '@sonoglyph/eridian';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { ALL_KEYS } from '@sonoglyph/plugin-dtmf';
 import { textToMorse } from '@sonoglyph/plugin-morse';
-import type { PlaygroundController } from '../controller.ts';
+import type { PlaygroundController, SignalSystem } from '../controller.ts';
 import { Panel } from '@sonoglyph/react';
 import { useController, useControllerTick } from '../hooks.ts';
 
@@ -23,7 +24,38 @@ const MORSE_EXPLAINER =
   'envelope — never the spectrum — so the pitch is irrelevant; the dots and dashes appear in ' +
   'the glyph timeline and assemble into text in the meaning panel.';
 
+const ERIDIAN_EXPLAINER =
+  'Everything starts as samples — here, chords of pure sine tones, the way the Eridian language ' +
+  'is voiced (from Project Hail Mary). Press a phrase: you hear its syllables as chords and watch ' +
+  'them travel through the exact same pipeline the other panels show. The recognizer reads the ' +
+  'spectral peaks, matches each chord to a syllable, and the meaning panel groups those syllables ' +
+  'into words. While the microphone is live, phrases are only played out loud — the mic picks them ' +
+  'up acoustically, so a second device speaking Eridian at this one decodes just the same.';
+
 const LABEL = 'flex flex-col gap-1 text-xs text-muted';
+
+/** A phrase to speak: an ordered list of words, each a list of syllable codes,
+ * voiced at a register. Mirrors the website composer's presets. */
+interface EridianPreset {
+  label: string;
+  words: SyllableCode[][];
+  register: Register;
+}
+
+const ERIDIAN_PRESETS: EridianPreset[] = [
+  { label: 'you good', words: [['S2'], ['S5']], register: 0 },
+  { label: 'are you good?', words: [['S2'], ['S5'], ['Q']], register: 0 },
+  { label: 'I am not good', words: [['NEG'], ['S1'], ['S5']], register: 0 },
+  { label: 'I am human', words: [['S1'], ['S3', 'S3'], ['BE']], register: 0 },
+  { label: 'I will hear you', words: [['S1'], ['S2'], ['S3', 'S6'], ['FUT']], register: 0 },
+  { label: 'Eridian amaze!', words: [['S4', 'S4'], ['S7']], register: 2 },
+];
+
+const EXPLAINERS: Record<SignalSystem, string> = {
+  dtmf: DTMF_EXPLAINER,
+  morse: MORSE_EXPLAINER,
+  eridian: ERIDIAN_EXPLAINER,
+};
 
 /** Run an async action, surfacing any failure through `setError`. */
 type Run = (action: () => Promise<void>) => void;
@@ -45,7 +77,7 @@ export function InputPanel() {
   return (
     <Panel
       title="Input"
-      explainer={system === 'dtmf' ? DTMF_EXPLAINER : MORSE_EXPLAINER}
+      explainer={EXPLAINERS[system]}
       controls={
         <>
           <button
@@ -78,8 +110,10 @@ export function InputPanel() {
     >
       {system === 'dtmf' ? (
         <DtmfInput controller={controller} run={run} />
-      ) : (
+      ) : system === 'morse' ? (
         <MorseInput controller={controller} run={run} />
+      ) : (
+        <EridianInput controller={controller} run={run} />
       )}
       {error && <p className="mt-2 text-[13px] text-danger">{error}</p>}
     </Panel>
@@ -260,6 +294,34 @@ function MorseInput({ controller, run }: { controller: PlaygroundController; run
       <p className="text-[12.5px] leading-normal text-faint">
         Dot = 1 unit, dash = 3; letters split on a 3-unit gap, words on 7. The recognizer tracks the
         sender’s speed, so brisk or slow both decode.
+      </p>
+    </div>
+  );
+}
+
+function EridianInput({ controller, run }: { controller: PlaygroundController; run: Run }) {
+  const listening = controller.status.mode === 'mic';
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <h3 className="text-[13px] font-bold text-heading">Play Rocky</h3>
+      <div className="flex flex-wrap gap-1.5">
+        {ERIDIAN_PRESETS.map((preset) => (
+          <button
+            key={preset.label}
+            className="active:bg-accent-dim"
+            onClick={() => run(() => controller.playEridian(preset.words, preset.register))}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[12.5px] leading-normal text-faint">
+        Each phrase is voiced as chords — one per syllable — and decoded back to English in the
+        meaning panel.{' '}
+        {listening
+          ? 'The microphone is live, so a phrase plays out loud and the mic hears it acoustically — the honest path, and how a second device speaking Eridian would reach this one.'
+          : 'Start the microphone above to hear a phrase through the air instead of fed straight in, or point another device running the composer at the mic.'}
       </p>
     </div>
   );

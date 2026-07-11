@@ -209,6 +209,9 @@ importers:
 
   website:
     dependencies:
+      '@sonoglyph/browser':
+        specifier: workspace:*
+        version: link:../packages/browser
       '@sonoglyph/core':
         specifier: workspace:*
         version: link:../packages/core

@@ -161,7 +161,7 @@ the embedded views follow the site's `data-theme` — including the printed
 
 ## Beyond
 
-Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the _Project Hail Mary_ origin story, now sketched as the [Hail Mary milestone](https://github.com/clarkedb/sonoglyph/milestone/5): Eridian language spec ✓ landed — [docs/eridian.md](./eridian.md) and `@sonoglyph/eridian` (phonology, starter lexicon, grammar, text-to-audio synthesis; issue #18) — recognizer plugin, and themed website experiences including Grace's realtime translator console), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
+Unordered, unpromised: chords and MIDI plugins, birdsong (probabilistic recognition), the Rocky plugin (polyphonic language, teaching mode, dictionary persistence — the _Project Hail Mary_ origin story, now sketched as the [Hail Mary milestone](https://github.com/clarkedb/sonoglyph/milestone/5): Eridian language spec ✓ landed — [docs/eridian.md](./eridian.md) and `@sonoglyph/eridian` (phonology, starter lexicon, grammar, text-to-audio synthesis; issue #18) — recognizer plugin ✓ landed (`@sonoglyph/plugin-eridian`, issue #77), and themed website experiences including Grace's realtime translator console ✓ landed (issue #21: an Eridian mode in the playground, then the live-microphone console at `/eridian/translator` — mic → pipeline → recognizer → English; teaching mode split out to issue #83)), storage providers (IndexedDB/SQLite-WASM), community plugin registry, Tauri desktop app, native CLI, SDR input sources.
 
 ## GitHub Actions
 

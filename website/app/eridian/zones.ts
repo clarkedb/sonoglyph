@@ -4,13 +4,26 @@
  * them. Mirrors how learn/articles.ts registers the Learn section.
  */
 export interface EridianZone {
-  slug: 'dictionary' | 'compose' | 'learn';
+  slug: 'dictionary' | 'compose' | 'learn' | 'translator';
   title: string;
   /** One-line summary for the hub card and cross-links. */
   blurb: string;
   /** The imperative promise, shown under the zone's own header. */
   lede: string;
 }
+
+/**
+ * The translator console — the flagship. Not one of the three explorer
+ * "ways in"; it's featured on its own on the hub and cross-linked from the
+ * other zones, so it lives here for a single source of title/blurb/lede but
+ * is pulled out of the three-card grid.
+ */
+export const TRANSLATOR_ZONE: EridianZone = {
+  slug: 'translator',
+  title: 'Translator console',
+  blurb: 'Speak Eridian at your microphone and watch it decode to English, live.',
+  lede: 'Grace’s translator, rebuilt in your browser: arm the microphone, and live audio flows through the real recognition pipeline — chord glyphs light up as Eridian is spoken, and words resolve to English as the sequences complete.',
+};
 
 export const ZONES: EridianZone[] = [
   {

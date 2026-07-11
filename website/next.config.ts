@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // Workspace packages export raw TypeScript source (`./src/index.ts`);
   // Next must compile them like app code.
   transpilePackages: [
+    '@sonoglyph/browser',
     '@sonoglyph/core',
     '@sonoglyph/dsp',
     '@sonoglyph/eridian',

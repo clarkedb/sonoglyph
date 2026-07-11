@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sonoglyph presentational React components: signal-visualization panels wired to any data source",
   "private": true,
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/testing",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sonoglyph plugin testing module — signal builders and a decode harness for testing recognition under realistic conditions",
   "license": "MIT",
   "repository": {

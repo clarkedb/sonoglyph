@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/dsp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sonoglyph reference DSP engine: windowing, FFT, spectrum, peaks, envelope",
   "license": "MIT",
   "repository": {

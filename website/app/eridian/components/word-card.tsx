@@ -33,7 +33,7 @@ export function WordCard({
       aria-pressed={selected}
       className={`group flex w-full flex-col gap-1.5 rounded-sm border p-3 text-left transition-colors ${
         selected
-          ? 'border-phosphor-dim bg-phosphor/10'
+          ? 'border-phosphor-dim bg-accent-dim'
           : 'border-line bg-void hover:border-phosphor-dim'
       }`}
     >

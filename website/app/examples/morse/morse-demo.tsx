@@ -361,7 +361,7 @@ export function MorseDemo() {
                 }}
                 className={`h-14 w-36 cursor-pointer rounded-sm border font-mono text-sm transition-colors ${
                   keyLit
-                    ? 'glyph-glow border-phosphor bg-phosphor/15 text-phosphor'
+                    ? 'glyph-glow border-phosphor bg-accent-dim text-phosphor'
                     : 'border-line bg-void text-ink hover:border-phosphor-dim'
                 }`}
               >

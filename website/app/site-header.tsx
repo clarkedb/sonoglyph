@@ -100,23 +100,28 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {/* Phone: the collapsible menu panel. */}
-      {open && (
-        <nav id="site-menu" aria-label="Primary" className="border-t border-line bg-void sm:hidden">
-          <div className="mx-auto flex max-w-4xl flex-col px-6 py-1">
-            {NAV_LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={() => setOpen(false)}
-                className={`border-b border-line/60 py-3 text-sm last:border-b-0 ${LINK_CLASS}`}
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-        </nav>
-      )}
+      {/* Phone: the collapsible menu panel. Always rendered (so the toggle's
+          aria-controls always resolves) and shown via the `hidden` attribute;
+          `sm:hidden` keeps it off the tablet-and-up layout regardless. */}
+      <nav
+        id="site-menu"
+        aria-label="Primary"
+        hidden={!open}
+        className="border-t border-line bg-void sm:hidden"
+      >
+        <div className="mx-auto flex max-w-4xl flex-col px-6 py-1">
+          {NAV_LINKS.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              onClick={() => setOpen(false)}
+              className={`border-b border-line/60 py-3 text-sm last:border-b-0 ${LINK_CLASS}`}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </nav>
     </header>
   );
 }

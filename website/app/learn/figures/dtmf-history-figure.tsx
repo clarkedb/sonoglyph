@@ -130,7 +130,7 @@ export function DtmfMatrixFigure() {
                   aria-label={`Play DTMF key ${key}`}
                   className={`size-11 cursor-pointer rounded-sm border font-mono text-sm transition-[border-color,transform] duration-100 active:scale-95 ${
                     pressed === key
-                      ? 'border-phosphor bg-phosphor/10 text-phosphor'
+                      ? 'border-phosphor bg-accent-dim text-phosphor'
                       : 'border-line bg-void text-ink hover:border-phosphor-dim'
                   }`}
                 >

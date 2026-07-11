@@ -35,9 +35,9 @@ export default function ExamplesIndex() {
               href={`/examples/${example.slug}`}
               className="group rounded-sm border border-line bg-panel p-4 transition-colors hover:border-phosphor-dim"
             >
-              <h3 className="font-mono text-[13px] text-ink transition-colors group-hover:text-phosphor">
+              <h2 className="font-mono text-[13px] text-ink transition-colors group-hover:text-phosphor">
                 {example.title} <span aria-hidden>→</span>
-              </h3>
+              </h2>
               <p className="mt-1.5 text-sm leading-relaxed text-ink-dim">{example.blurb}</p>
             </a>
           ))}

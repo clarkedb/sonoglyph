@@ -30,8 +30,8 @@ export function RegisterControl({
             onClick={() => onChange(r)}
             className={`cursor-pointer rounded-sm border px-2 py-1 font-mono text-[11px] tabular-nums transition-colors ${
               r === value
-                ? 'border-phosphor-dim bg-phosphor/10 text-phosphor'
-                : 'border-line text-ink-dim hover:border-ink-dim hover:text-ink'
+                ? 'border-phosphor-dim bg-accent-dim text-phosphor'
+                : 'border-line bg-void text-ink-dim hover:border-ink-dim hover:text-ink'
             }`}
           >
             {r > 0 ? `+${r}` : r}

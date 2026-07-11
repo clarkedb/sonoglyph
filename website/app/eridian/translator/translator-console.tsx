@@ -67,9 +67,9 @@ export function TranslatorConsole() {
             onClick={() => (listening ? void engine.disarm() : void engine.arm())}
             disabled={status === 'starting'}
             aria-pressed={live}
-            className={`cursor-pointer rounded-sm border px-4 py-2 font-display text-sm font-semibold tracking-wide uppercase transition-colors disabled:cursor-default disabled:opacity-60 ${
+            className={`cursor-pointer rounded-sm border bg-accent-dim px-4 py-2 font-display text-sm font-semibold tracking-wide uppercase transition-colors disabled:cursor-default disabled:opacity-60 ${
               live
-                ? 'border-phosphor bg-phosphor/10 text-phosphor'
+                ? 'border-phosphor text-phosphor'
                 : 'border-phosphor-dim text-phosphor hover:border-phosphor'
             }`}
           >

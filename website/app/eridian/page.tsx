@@ -45,6 +45,15 @@ export default function EridianHubPage() {
             — powered by the real observable pipeline, not a mockup.
           </p>
         </a>
+        <p className="mt-2.5 font-mono text-[11px] text-ink-dim">
+          <a
+            href="/eridian/transmitter"
+            className="text-phosphor underline decoration-line underline-offset-4 transition-colors hover:decoration-phosphor"
+          >
+            Turn a phone into Rocky →
+          </a>{' '}
+          and speak Eridian at the console across the room.
+        </p>
       </section>
 
       <section className="mt-14">

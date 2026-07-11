@@ -29,10 +29,10 @@ const SPECS = [
 ] as const;
 
 const GLYPHS = [
-  { symbol: '5', system: 'dtmf' },
-  { symbol: '–', system: 'morse' },
-  { symbol: 'Am', system: 'chord' },
-  { symbol: '♫', system: 'eridian' },
+  { symbol: '5', system: 'dtmf', href: '/examples/dtmf' },
+  { symbol: '–', system: 'morse', href: '/examples/morse' },
+  { symbol: 'Am', system: 'chord' }, // no recognizer yet — on the roadmap
+  { symbol: '♫', system: 'eridian', href: '/eridian' },
 ] as const;
 
 export default function Home() {
@@ -87,15 +87,33 @@ export default function Home() {
           the translator in <em>Project Hail Mary</em>.
         </p>
         <div className="mt-6 flex flex-wrap gap-2.5">
-          {GLYPHS.map((g) => (
-            <span
-              key={g.system}
-              className="flex items-baseline gap-2 rounded-sm border border-line bg-panel px-3 py-1.5 font-mono text-sm"
-            >
-              <span className="text-phosphor">⟨{g.symbol}⟩</span>
-              <span className="text-[11px] text-ink-dim">{g.system}</span>
-            </span>
-          ))}
+          {GLYPHS.map((g) => {
+            const chipClass =
+              'flex items-baseline gap-2 rounded-sm border bg-panel px-3 py-1.5 font-mono text-sm';
+            const inner = (
+              <>
+                <span className="text-phosphor">⟨{g.symbol}⟩</span>
+                <span className="text-[11px] text-ink-dim">{g.system}</span>
+              </>
+            );
+            const href = 'href' in g ? g.href : undefined;
+            return href ? (
+              <a
+                key={g.system}
+                href={href}
+                className={`${chipClass} group border-line transition-colors hover:border-phosphor-dim`}
+              >
+                {inner}
+                <span aria-hidden className="text-[11px] text-ink-dim group-hover:text-phosphor">
+                  →
+                </span>
+              </a>
+            ) : (
+              <span key={g.system} className={`${chipClass} border-line`}>
+                {inner}
+              </span>
+            );
+          })}
         </div>
       </section>
 

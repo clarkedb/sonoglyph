@@ -94,6 +94,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 examples
               </a>
               <a
+                href="/eridian"
+                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
+              >
+                eridian
+              </a>
+              <a
                 href={REPO_URL}
                 className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
               >

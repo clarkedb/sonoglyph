@@ -215,9 +215,15 @@ importers:
       '@sonoglyph/dsp':
         specifier: workspace:*
         version: link:../packages/dsp
+      '@sonoglyph/eridian':
+        specifier: workspace:*
+        version: link:../packages/eridian
       '@sonoglyph/plugin-dtmf':
         specifier: workspace:*
         version: link:../plugins/dtmf
+      '@sonoglyph/plugin-eridian':
+        specifier: workspace:*
+        version: link:../plugins/eridian
       '@sonoglyph/plugin-morse':
         specifier: workspace:*
         version: link:../plugins/morse

@@ -71,7 +71,9 @@ export function GlyphTimeline() {
         emptyMessage={
           showPair
             ? 'No glyphs yet — press a keypad key or hold your phone’s dialer up to the microphone.'
-            : 'No glyphs yet — key a message in the input panel, or feed Morse from the microphone.'
+            : system === 'eridian'
+              ? 'No glyphs yet — play an Eridian phrase in the input panel, or speak one at the microphone.'
+              : 'No glyphs yet — key a message in the input panel, or feed Morse from the microphone.'
         }
       />
     </Panel>

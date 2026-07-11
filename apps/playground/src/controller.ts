@@ -21,8 +21,16 @@ import {
   TsDspEngine,
 } from '@sonoglyph/dsp';
 import { initDspWasm, WasmDspEngineAdapter } from '@sonoglyph/dsp-wasm';
+import {
+  renderTokens,
+  type Register,
+  type SyllableCode,
+  type SyllableToken,
+} from '@sonoglyph/eridian';
 import type { DtmfKey } from '@sonoglyph/plugin-dtmf';
 import { DtmfRecognizer, frequenciesFor, GoertzelDtmfRecognizer } from '@sonoglyph/plugin-dtmf';
+import type { EridianTranslation } from '@sonoglyph/plugin-eridian';
+import { EridianRecognizer, EridianTranslator } from '@sonoglyph/plugin-eridian';
 import type { MorseElementPayload, MorseTranscript } from '@sonoglyph/plugin-morse';
 import { MorseRecognizer, MorseTextTranslator, morseTiming } from '@sonoglyph/plugin-morse';
 
@@ -32,11 +40,13 @@ const MORSE_LETTER_CLOSE_UNITS = 2;
 
 const EMPTY_TRANSCRIPT: MorseTranscript = { text: '', letters: [] };
 
+const EMPTY_TRANSLATION: EridianTranslation = { utterances: [], text: '' };
+
 export type InputMode = 'idle' | 'starting' | 'mic' | 'buffer' | 'key';
 
 /** Which signal system the playground is exploring. The input, the active
  * recognizer(s), and the output panels all follow this one choice. */
-export type SignalSystem = 'dtmf' | 'morse';
+export type SignalSystem = 'dtmf' | 'morse' | 'eridian';
 
 /** Within DTMF, which recognizer(s) feed the glyph timeline. */
 export type DecoderChoice = 'fft' | 'goertzel' | 'both';
@@ -84,6 +94,12 @@ export class PlaygroundController {
   // adaptation catches up, splitting a letter into single-dot pieces.
   private readonly morseRecognizer = new MorseRecognizer({ unitMs: 120 });
   private readonly morseTranslator = new MorseTextTranslator();
+  // Eridian: the recognizer reads the peaks stream (chords are clean sine
+  // tones), the translator groups chord glyphs into words by the silences
+  // between them. Both are long-lived; a pipeline rebuild resets/flushes them
+  // the same way the Morse pair is handled.
+  private readonly eridianRecognizer = new EridianRecognizer();
+  private readonly eridianTranslator = new EridianTranslator();
   private system: SignalSystem = 'dtmf';
   private decoders: DecoderChoice = 'fft';
   /** TS is the default — the readable reference and the teaching text. WASM is
@@ -133,6 +149,9 @@ export class PlaygroundController {
   /** The Morse translator's running decode (the Meaning layer): assembled
    * text plus the letters behind it, each with the code it came from. */
   morseTranscript: MorseTranscript = EMPTY_TRANSCRIPT;
+  /** The Eridian translator's running reading (the Meaning layer): the
+   * utterances decoded so far, including the one still accumulating. */
+  eridianTranslation: EridianTranslation = EMPTY_TRANSLATION;
   status: PlaygroundStatus = {
     mode: 'idle',
     sampleRate: DEFAULT_ENGINE_OPTIONS.sampleRate,
@@ -153,6 +172,12 @@ export class PlaygroundController {
     // on flush/reset); mirror it into React-visible state.
     this.morseTranslator.onMeaning((transcript) => {
       this.morseTranscript = transcript;
+      this.notify();
+    });
+    // The Eridian translator republishes its reading after each chord (and on
+    // flush/reset); mirror it into React-visible state, same as Morse.
+    this.eridianTranslator.onMeaning((translation) => {
+      this.eridianTranslation = translation;
       this.notify();
     });
     this.pipeline = this.buildPipeline();
@@ -185,8 +210,11 @@ export class PlaygroundController {
   }
 
   /** The recognizers the current signal system puts on the pipeline. */
-  private activeRecognizers(): (DtmfRecognizer | GoertzelDtmfRecognizer | MorseRecognizer)[] {
+  private activeRecognizers(): (
+    DtmfRecognizer | GoertzelDtmfRecognizer | MorseRecognizer | EridianRecognizer
+  )[] {
     if (this.system === 'morse') return [this.morseRecognizer];
+    if (this.system === 'eridian') return [this.eridianRecognizer];
     return this.decoders === 'fft'
       ? [this.fftRecognizer]
       : this.decoders === 'goertzel'
@@ -208,11 +236,13 @@ export class PlaygroundController {
     this.fftRecognizer.reset();
     this.goertzelRecognizer.reset();
     this.morseRecognizer.reset();
-    // A new engine restarts stream time; flush the translator so it closes
-    // any pending letter and doesn't measure the next element's gap against
-    // the old time base. The decoded transcript so far is kept, matching
+    this.eridianRecognizer.reset();
+    // A new engine restarts stream time; flush the translators so they close
+    // any pending letter/utterance and don't measure the next element's gap
+    // against the old time base. The decoded history so far is kept, matching
     // how glyph history survives a rebuild.
     this.morseTranslator.flush();
+    this.eridianTranslator.flush();
     const recognizers = this.activeRecognizers();
     // Compute the streams the panels always need plus whatever the active
     // recognizers declare (the Goertzel one wants raw `samples`).
@@ -238,10 +268,12 @@ export class PlaygroundController {
     });
     this.glyphUnsub = pipeline.onGlyph((glyph) => {
       this.glyphs = [...this.glyphs, glyph];
-      // Feed the Meaning layer: the translator reads the element glyphs and
-      // assembles letters/words, ignoring glyphs it doesn't understand.
-      // (It publishes via onMeaning, wired in the constructor.)
+      // Feed the Meaning layer: each translator reads the glyphs it understands
+      // and ignores the rest (they filter by pluginId), so pushing to both is
+      // safe regardless of the active system. Both publish via onMeaning, wired
+      // in the constructor.
       this.morseTranslator.push(glyph);
+      this.eridianTranslator.push(glyph);
       const units = (glyph.payload as MorseElementPayload | undefined)?.units;
       if (glyph.pluginId === 'morse' && units) this.morseUnitSec = glyph.duration / units;
       this.notify();
@@ -302,6 +334,7 @@ export class PlaygroundController {
     this.system = system;
     this.glyphs = [];
     this.morseTranslator.reset();
+    this.eridianTranslator.reset();
     this.pipeline = this.buildPipeline();
     this.notify();
   }
@@ -353,6 +386,23 @@ export class PlaygroundController {
     // follows in a later buffer.
     parts.push(silence((7 * unitMs) / 1000, sampleRate));
     await this.playBuffer(concat(...parts), sampleRate);
+  }
+
+  /**
+   * Speak an Eridian phrase: synthesize its chords (with the intra/inter-word
+   * gaps the grammar voices) and play it. This is the playground's "Play-Rocky"
+   * — with the microphone live, `playBuffer` skips the direct feed and the mic
+   * picks the chords up acoustically (the honest path); otherwise they stream
+   * straight in. `words` is a list of words, each a list of syllable codes.
+   */
+  async playEridian(words: SyllableCode[][], register: Register = 0): Promise<void> {
+    const tokens = codesToTokens(words);
+    if (tokens.length === 0) return;
+    const sampleRate = this.engineOptions.sampleRate;
+    // renderTokens envelopes each chord, so no extra fade is needed (unlike the
+    // bare DTMF/Morse tones). Match the composer: push the same buffer we hear.
+    const audio = renderTokens(tokens, { sampleRate, register });
+    await this.playBuffer(audio, sampleRate);
   }
 
   /**
@@ -648,10 +698,41 @@ export class PlaygroundController {
 
   clearGlyphs(): void {
     this.glyphs = [];
-    // reset() republishes an empty transcript via onMeaning.
+    // reset() republishes an empty transcript/translation via onMeaning.
     this.morseTranslator.reset();
+    this.eridianTranslator.reset();
     this.notify();
   }
+}
+
+/** A single-syllable PST/FUT word glues onto the verb before it with no
+ * inter-word gap — the grammar's "tense attaches to the predicate" rule. */
+function isTenseWord(word: SyllableCode[]): boolean {
+  return word.length === 1 && (word[0] === 'PST' || word[0] === 'FUT');
+}
+
+/** Flatten words (each a list of syllable codes) into a gap-annotated token
+ * stream: small gaps within a word, larger between words, tense suffixes glued
+ * on. Mirrors the website composer's `wordsToTokens`, but from codes directly
+ * (synthesis needs no lexicon lookup). */
+function codesToTokens(words: SyllableCode[][]): SyllableToken[] {
+  const tokens: SyllableToken[] = [];
+  words.forEach((word, wi) => {
+    const lastWord = wi === words.length - 1;
+    const nextGluesOn = !lastWord && isTenseWord(words[wi + 1]!);
+    word.forEach((code, si) => {
+      const lastSyl = si === word.length - 1;
+      const boundary: SyllableToken['boundary'] = !lastSyl
+        ? 'syllable'
+        : lastWord
+          ? 'final'
+          : nextGluesOn
+            ? 'syllable'
+            : 'word';
+      tokens.push({ code, boundary });
+    });
+  });
+  return tokens;
 }
 
 /** Free an engine that owns native resources (the WASM adapter). The TS engine

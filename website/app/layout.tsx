@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Barlow, Barlow_Condensed, Fragment_Mono } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
-import { ThemeToggle } from './theme-toggle';
+import { SiteHeader } from './site-header';
 import { REPO_URL, SITE_URL } from './site';
 
 /* Voice: mid-century technical documentation. Barlow (road-signage grotesque
@@ -72,43 +72,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInit }} />
       </head>
       <body>
-        <header className="border-b border-line">
-          <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-            <a href="/" className="font-mono text-sm text-ink">
-              <span aria-hidden className="text-phosphor">
-                ∿
-              </span>{' '}
-              sonoglyph
-            </a>
-            <nav className="flex items-center gap-5">
-              <a
-                href="/learn"
-                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
-              >
-                learn
-              </a>
-              <a
-                href="/examples"
-                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
-              >
-                examples
-              </a>
-              <a
-                href="/eridian"
-                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
-              >
-                eridian
-              </a>
-              <a
-                href={REPO_URL}
-                className="font-mono text-xs text-ink-dim transition-colors hover:text-ink"
-              >
-                github ↗
-              </a>
-              <ThemeToggle />
-            </nav>
-          </div>
-        </header>
+        <SiteHeader />
         {children}
         <footer className="mt-28 border-t border-line">
           <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-6 py-8 font-mono text-xs text-ink-dim">

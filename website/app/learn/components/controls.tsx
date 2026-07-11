@@ -29,10 +29,13 @@ export function Btn({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      // An opaque fill so the button reads as a solid control instead of
+      // letting the graph-paper grid show through (it sits on a .graph-grid
+      // panel in most figures).
       className={`cursor-pointer rounded-sm border px-3 py-1.5 font-mono text-xs transition-colors disabled:cursor-default disabled:opacity-50 ${
         primary
-          ? 'border-phosphor-dim text-phosphor hover:border-phosphor'
-          : 'border-line text-ink hover:border-ink-dim'
+          ? 'border-phosphor-dim bg-accent-dim text-phosphor hover:border-phosphor'
+          : 'border-line bg-control text-ink hover:border-ink-dim hover:bg-control-hover'
       }`}
     >
       {children}

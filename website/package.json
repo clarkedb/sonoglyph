@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@sonoglyph/browser": "workspace:*",
     "@sonoglyph/core": "workspace:*",
     "@sonoglyph/dsp": "workspace:*",
     "@sonoglyph/eridian": "workspace:*",

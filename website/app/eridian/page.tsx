@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { HubHero } from './hub-hero';
-import { ZONES } from './zones';
+import { TRANSLATOR_ZONE, ZONES } from './zones';
 
 export const metadata: Metadata = {
   title: 'Eridian language explorer',
@@ -29,6 +29,25 @@ export default function EridianHubPage() {
       </section>
 
       <section className="mt-16">
+        <h2 className="font-mono text-[13px] text-ink-dim">the centerpiece</h2>
+        <a
+          href={`/eridian/${TRANSLATOR_ZONE.slug}`}
+          className="group mt-4 block rounded-sm border border-phosphor-dim bg-panel p-6 transition-colors hover:border-phosphor sm:p-7"
+        >
+          <p className="font-mono text-[11px] tracking-widest text-phosphor-dim uppercase">
+            live · microphone
+          </p>
+          <h3 className="mt-2 font-display text-2xl font-semibold tracking-wide text-ink transition-colors group-hover:text-phosphor sm:text-3xl">
+            {TRANSLATOR_ZONE.title} <span aria-hidden>→</span>
+          </h3>
+          <p className="mt-2 max-w-[64ch] text-[15px] leading-relaxed text-ink-dim">
+            {TRANSLATOR_ZONE.blurb} It’s the jury-rigged translator from <em>Project Hail Mary</em>{' '}
+            — powered by the real observable pipeline, not a mockup.
+          </p>
+        </a>
+      </section>
+
+      <section className="mt-14">
         <h2 className="font-mono text-[13px] text-ink-dim">three ways in</h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           {ZONES.map((zone) => (

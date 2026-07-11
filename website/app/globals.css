@@ -19,6 +19,8 @@
   --phosphor: oklch(0.8 0.14 75);
   --phosphor-dim: oklch(0.62 0.1 72);
   --danger: oklch(0.65 0.19 25);
+  /* Accent-tint chip background (raw so it can differ per theme). */
+  --accent-dim: color-mix(in oklch, var(--phosphor) 22%, var(--void));
   --grid-minor: color-mix(in oklch, var(--line) 30%, transparent);
   --grid-major: color-mix(in oklch, var(--line) 60%, transparent);
   --glow: 0 0 14px color-mix(in oklch, var(--phosphor) 40%, transparent);
@@ -35,8 +37,14 @@
   --ink-dim: oklch(0.46 0.02 250);
   --line: oklch(0.83 0.012 250);
   --phosphor: oklch(0.53 0.13 65);
-  --phosphor-dim: oklch(0.62 0.11 65);
+  /* Darker than the accent so small mono labels clear WCAG AA (4.5:1) on the
+   * light panel/canvas — at 0.62 they landed ~3.4:1. */
+  --phosphor-dim: oklch(0.5 0.11 65);
   --danger: oklch(0.5 0.19 25);
+  /* On paper there's no glow, so amber-on-amber chips (accent text on the
+   * accent tint) ran ~3.7:1. Lighten just the light-theme tint so phosphor
+   * text clears AA; the dark chips keep their deeper tint. */
+  --accent-dim: color-mix(in oklch, var(--phosphor) 5%, var(--void));
   --grid-minor: color-mix(in oklch, var(--line) 45%, transparent);
   --grid-major: color-mix(in oklch, var(--line) 85%, transparent);
   --glow: none;
@@ -87,7 +95,7 @@
   --color-soft: color-mix(in oklch, var(--ink) 45%, var(--ink-dim));
   --color-faint: color-mix(in oklch, var(--ink-dim) 60%, var(--line));
   --color-accent: var(--phosphor);
-  --color-accent-dim: color-mix(in oklch, var(--phosphor) 22%, var(--void));
+  --color-accent-dim: var(--accent-dim);
   --font-sans: var(--font-barlow), 'Helvetica Neue', Arial, sans-serif;
   --font-display: var(--font-condensed), 'Arial Narrow', sans-serif;
   --font-mono: var(--font-fragment), ui-monospace, 'SF Mono', Menlo, monospace;
@@ -131,6 +139,40 @@ p {
 :focus-visible {
   outline: 2px solid var(--phosphor);
   outline-offset: 2px;
+}
+
+/* An `outline` on a focusable SVG <g> doesn't render in WebKit, so the chord
+ * diagram's syllable buttons draw their own focus ring: stroke the (otherwise
+ * invisible) hit rect instead. */
+.chord-col:focus-visible {
+  outline: none;
+}
+.chord-col:focus-visible .chord-hit {
+  stroke: var(--phosphor);
+  stroke-width: 2;
+}
+
+/* Skip link: off-screen until focused, then pinned top-left. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel);
+  padding: 0.5rem 0.85rem;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+.skip-link:focus {
+  transform: translateY(0);
+}
+/* The skip target is a focus sink, not an interactive control — no ring. */
+#main-content:focus {
+  outline: none;
 }
 
 /* Graph paper: minor 8px + major 40px rulings, theme-aware. */
@@ -248,6 +290,16 @@ p {
   }
   .anim-idle {
     opacity: 0.65;
+  }
+  /* Flatten every remaining transition/animation — the scale/translate
+   * micro-interactions on buttons and links included, so no movement fires
+   * regardless of where it's declared. End states still apply instantly. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

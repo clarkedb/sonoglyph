@@ -239,16 +239,25 @@ function ChordStrip({
       {shown.map((glyph, i) => {
         const payload = glyph.payload as EridianChordPayload | undefined;
         const register = payload ? `${payload.register >= 0 ? '+' : ''}${payload.register}` : '';
+        const shape = payload ? (payload.content ? 'triad' : 'dyad') : '';
+        const conf = `${(glyph.confidence * 100).toFixed(0)}% confidence`;
         return (
+          // A labeled graphic: the full reading (confidence, register) is only
+          // in the title for a mouse, so expose it to AT via aria-label and
+          // hide the decorative inner spans.
           <span
             key={i}
-            title={`${(glyph.confidence * 100).toFixed(0)}% confidence${payload ? ` · register ${register}` : ''}`}
+            role="img"
+            aria-label={`${glyph.symbol}${shape ? `, ${shape}` : ''}, ${conf}${payload ? `, register ${register}` : ''}`}
+            title={`${conf}${payload ? ` · register ${register}` : ''}`}
             className="glyph-glow anim-glyph flex flex-col items-center rounded-sm border border-accent bg-accent-dim px-2 py-1 leading-none"
           >
-            <span className="text-[15px] font-bold text-phosphor">{glyph.symbol}</span>
+            <span aria-hidden className="text-[15px] font-bold text-phosphor">
+              {glyph.symbol}
+            </span>
             {payload && (
-              <span className="mt-1 font-mono text-[9px] text-phosphor-dim">
-                {payload.content ? 'triad' : 'dyad'}
+              <span aria-hidden className="mt-1 font-mono text-[9px] text-phosphor">
+                {shape}
               </span>
             )}
           </span>
@@ -292,10 +301,17 @@ function UtteranceCard({ utterance }: { utterance: EridianUtterance }) {
           <span
             key={w}
             title={word.syllables.join('-')}
-            className={`font-mono text-[12px] ${word.entry ? 'text-ink-dim' : 'text-danger'}`}
+            className={`font-mono text-[12px] ${
+              word.entry
+                ? 'text-ink-dim'
+                : 'text-danger underline decoration-dotted underline-offset-2'
+            }`}
           >
             {word.gloss}
             {word.tense ? ` [${word.tense}]` : ''}
+            {!word.entry && (
+              <span className="sr-only"> (unrecognized chord {word.syllables.join('-')})</span>
+            )}
           </span>
         ))}
       </div>

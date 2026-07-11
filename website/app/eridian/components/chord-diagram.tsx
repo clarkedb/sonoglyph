@@ -40,13 +40,16 @@ export function ChordDiagram({
   const y = (hz: number) => PAD_TOP + (1 - (Math.log2(hz) - Math.log2(lo)) / span) * PLOT_H;
 
   const width = COL_W * columns.length;
+  const interactive = Boolean(onPlaySyllable);
 
   return (
     <svg
       viewBox={`0 0 ${width} ${VIEW_H}`}
       preserveAspectRatio="xMidYMid meet"
       className="block h-44 w-full"
-      role="img"
+      // A plain graphic when static; when the columns are play buttons it's a
+      // labeled group, so `role="img"` doesn't hide those buttons from AT.
+      role={interactive ? 'group' : 'img'}
       aria-label={
         ariaLabel ??
         `Pitch ladder for ${syllables.join('-')}, register ${register >= 0 ? '+' : ''}${register}`
@@ -58,11 +61,10 @@ export function ChordDiagram({
         const ys = col.notesHz.map(y);
         const top = Math.min(...ys);
         const bottom = Math.max(...ys);
-        const interactive = Boolean(onPlaySyllable);
         return (
           <g
             key={i}
-            className={interactive ? 'cursor-pointer' : undefined}
+            className={interactive ? 'chord-col cursor-pointer' : undefined}
             onClick={interactive ? () => onPlaySyllable!(col.code, i) : undefined}
             role={interactive ? 'button' : undefined}
             tabIndex={interactive ? 0 : undefined}
@@ -78,9 +80,17 @@ export function ChordDiagram({
                 : undefined
             }
           >
-            {/* invisible hit target spanning the column */}
+            {/* invisible hit target spanning the column; also the focus ring */}
             {interactive && (
-              <rect x={cx - COL_W / 2} y={0} width={COL_W} height={VIEW_H} fill="transparent" />
+              <rect
+                className="chord-hit"
+                x={cx - COL_W / 2 + 2}
+                y={2}
+                width={COL_W - 4}
+                height={VIEW_H - 4}
+                rx={4}
+                fill="transparent"
+              />
             )}
             {/* the chord stack: a faint spine joining the notes */}
             <line

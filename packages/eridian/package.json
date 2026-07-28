@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/eridian",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The Eridian language: phonology, lexicon, grammar, and text-to-audio synthesis",
   "private": true,
   "type": "module",

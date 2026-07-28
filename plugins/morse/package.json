@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/plugin-morse",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Morse recognizer plugin for Sonoglyph — time-domain recognition off the envelope stream, letters and text via the Meaning layer",
   "license": "MIT",
   "repository": {

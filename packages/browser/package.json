@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sonoglyph browser audio: microphone capture via AudioWorklet, ring buffer, WAV, streaming sources",
   "license": "MIT",
   "repository": {

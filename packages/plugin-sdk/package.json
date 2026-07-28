@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/plugin-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sonoglyph plugin SDK — segmentation and debouncing helpers that turn per-frame classifiers into recognizer plugins",
   "license": "MIT",
   "repository": {

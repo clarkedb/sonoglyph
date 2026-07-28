@@ -1,6 +1,6 @@
 {
   "name": "@sonoglyph/plugin-eridian",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Eridian recognizer plugin for Sonoglyph — polyphonic recognition of the Project Hail Mary chord-language, chords to glyphs to sentences",
   "private": true,
   "type": "module",

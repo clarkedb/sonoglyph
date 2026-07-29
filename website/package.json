@@ -19,10 +19,10 @@
     "@sonoglyph/plugin-morse": "workspace:*",
     "@sonoglyph/react": "workspace:*",
     "@vercel/analytics": "^2.0.1",
-    "next": "^16.2.10",
+    "next": "^16.2.12",
     "qrcode-generator": "^2.0.4",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
